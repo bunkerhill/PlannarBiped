@@ -80,5 +80,5 @@ right_shank = CoordinateFrame2D('Name', 'right_shank', 'ParentFrame', right_thig
 right_shankBody = RigidBody2D('Name', 'right_shank', 'CoordinateFrame', right_shank, 'Mass', m_shank, 'CenterOfMassInBodyFrame', com_shank, 'MomentOfInertia', I_shank);
 
 % Right foot
-right_foot = CoordinateFrame2D('Name', 'right_foot', 'ParentFrame', right_shank, 'Rotation', SO2(theta6), 'Displacement', Point2D('Y', -l_shank));
-right_footBody = RigidBody2D('Name', 'right_foot', 'CoordinateFrame', right_foot, 'Mass', m_foot, 'CenterOfMassInBodyFrame', com_foot, 'MomentOfInertia', I_foot);
+left_foot = CoordinateFrame2D('Name', 'left_foot', 'ParentFrame', left_shank, 'Rotation', SO2(theta3), 'Displacement', Point2D('Y', -l_shank));
+left_footBody = RigidBody2D('Name', 'left_foot', 'CoordinateFrame', left_foot, 'Mass', m_foot, 'CenterOfMassInBodyFrame', com_foot, 'MomentOfInertia', I_foot);
