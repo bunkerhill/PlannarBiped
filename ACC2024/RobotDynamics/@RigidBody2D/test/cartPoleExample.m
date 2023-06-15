@@ -1,6 +1,8 @@
 clear
 clc
-addpath("../../")
+% addpath("../../")
+root = get_root_path();
+addpath(root)
 
 %% Cart-Pole system example
 
