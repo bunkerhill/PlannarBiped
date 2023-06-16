@@ -44,3 +44,5 @@ Step 1 and 2 are relatively clear and step3 is more exploratory.
 
 Please let me know what do you think and feel free to fetch the code and contribute to the repository.
 
+The 7 links biped robot is modeled according following form:
+![Alt text](coordinate.png)
