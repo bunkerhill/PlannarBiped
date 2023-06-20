@@ -83,7 +83,7 @@ right_shankBody = RigidBody2D('Name', 'right_shank', 'CoordinateFrame', right_sh
 right_foot = CoordinateFrame2D('Name', 'right_foot', 'ParentFrame', right_shank, 'Rotation', SO2(theta6), 'Displacement', Point2D('Y', -l_shank));
 right_footBody = RigidBody2D('Name', 'right_foot', 'CoordinateFrame', right_foot, 'Mass', m_foot, 'CenterOfMassInBodyFrame', com_foot, 'MomentOfInertia', I_foot);
 
-%% Calculate Energy
+%% Calculate Dynamics Equation using Lagrange
 
 % total kinetic energy
 KE_torso = torsoBody.getKineticEnergy(generalCoordinates, generalVelocities);
@@ -106,17 +106,4 @@ PE_left_foot = left_footBody.getPotentialEnerge();
 PE_right_thigh = right_thighBody.getPotentialEnerge();
 PE_right_shank = right_shankBody.getPotentialEnerge();
 PE_right_foot = right_footBody.getPotentialEnerge();
-PE = PE_torso + PE_left_thigh + PE_left_shank + PE_left_foot + PE_right_thigh + PE_right_shank + PE_right_foot;
-
-PE = simplify(PE)
-
-%% Calculate Dynamics Equation using Lagrange
-
-% gravity vector
-G_vect = jacobian(PE,generalCoordinates).';
-G_vect = simplify(G_vect);
-
-% mass-inertial matrix
-D_mtx = simplify(jacobian(KE,generalVelocities).');
-D_mtx = simplify(jacobian(D_mtx,generalVelocities));
-
+PE = PE_torso + PE_left_thigh + PE_left_shank + PE_left_foot + PE_right_thigh + PE_right_
