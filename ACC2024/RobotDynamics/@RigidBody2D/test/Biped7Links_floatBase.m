@@ -120,3 +120,31 @@ G_vect = simplify(G_vect);
 D_mtx = simplify(jacobian(KE,generalVelocities).');
 D_mtx = simplify(jacobian(D_mtx,generalVelocities));
 
+% Coriolis and centrifugal matrix
+syms C_mtx real
+n=max(size(generalCoordinates));
+for k=1:n
+	for j=1:n
+		C_mtx(k,j)=0;
+		for i=1:n
+			C_mtx(k,j)=C_mtx(k,j)+1/2*(diff(D_mtx(k,j),generalCoordinates(i)) + ...
+				diff(D_mtx(k,i),generalCoordinates(j)) - ...
+				diff(D_mtx(i,j),generalCoordinates(k)))*generalVelocities(i);
+		end
+	end
+end
+C_mtx=simplify(C_mtx);
+
+% input matrix
+Phi_0 = [theta1;
+         theta2;
+         theta3;
+         theta4;
+         theta5;
+         theta6];
+B_mtx = jacobian(Phi_0,generalCoordinates).';
+
+% swing foot force input matrix (F_ext = [F_x;F_y;M_z])
+% ºŸ…Ë÷ß≥≈Õ»Œ™”“Õ»
+Phi_1 = [right_footBody.getCOMPosition(); right_footBody.getCOMAngle()];
+E_mtx = jacobian(Phi_1,generalCoordinates).';
