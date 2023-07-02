@@ -30,6 +30,14 @@ It is also written in old fasion.
 3. The scripts calculate kinetic energy and potential energy that will be used to find Lagrangian and dynamics equations.
 
 
+## Update on July 1st
+Add configuration definitino:
+https://www.overleaf.com/4843836855krgxvtgmgdxt 
+
+Add Continuous dynamics model
+
+
+
 ## What is next
 
 To achieve the research goal which I have explained to you, these are what we need to work on:

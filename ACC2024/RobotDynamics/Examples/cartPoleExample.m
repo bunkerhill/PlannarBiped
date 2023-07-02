@@ -1,8 +1,5 @@
 clear
 clc
-% addpath("../../")
-root = get_root_path();
-addpath(root)
 
 %% Cart-Pole system example
 
@@ -31,20 +28,23 @@ base = CoordinateFrame2D('Name', 'base');
 p = Point2D('X', x);
 cartFrame = CoordinateFrame2D('Name', 'cart', 'ParentFrame', base, 'Displacement', p);
 cartBody = RigidBody2D('Name', 'cart', 'CoordinateFrame', cartFrame, 'Mass', m1, 'CenterOfMassInBodyFrame', Point2D('X', 0, 'Y', 0), 'MomentOfInertia', 0);
-cartPositon = cartBody.getCOMPosition()
-cartVelocity = cartBody.getCOMVelocity(generalCoordinates, generalVelocities)
-cartTransitionEnergy = cartBody.getCOMTransitionKineticEnergy(generalCoordinates, generalVelocities)
-cartRotationEnergy = cartBody.getRotationEnergy(generalCoordinates, generalVelocities)
-cartPotentialEnergy = cartBody.getPotentialEnerge()
-
 
 %% Pole Frame: z axis rotation
 pole = CoordinateFrame2D('Name', 'pole', 'ParentFrame', cartFrame, 'Rotation', SO2(theta));
 poleBody = RigidBody2D('Name', 'pole', 'CoordinateFrame', pole, 'Mass', m2, 'CenterOfMassInBodyFrame', com2, 'MomentOfInertia', I2);
 
-poleCOMPosition = poleBody.getCOMPosition()
-poleCOMVelocity = poleBody.getCOMVelocity(generalCoordinates, generalVelocities)
-poleCOMKineticEnergy = poleBody.getCOMTransitionKineticEnergy(generalCoordinates, generalVelocities)
-poleRotationEnergy = poleBody.getRotationEnergy(generalCoordinates, generalVelocities)
-poleKineticEnergy = poleBody.getKineticEnergy(generalCoordinates, generalVelocities)
-polePotentialEnergy = poleBody.getPotentialEnerge()
+%% Actuation: Horizontal force applied on cart
+InputForce = Force2D('X', sym('F'));
+InputGeneralizedForce = GeneralizedForce2D('Name', 'Input', 'Force', InputForce, 'Displacement', p);
+
+%% Build continous dynamics
+cartPoleSystem = ContinuousDynamics(generalCoordinates, generalVelocities);
+cartPoleSystem = cartPoleSystem.AddRigidBody(cartBody);
+cartPoleSystem = cartPoleSystem.AddRigidBody(poleBody);
+
+cartPoleSystem = cartPoleSystem.AddGeneralizedForce(InputGeneralizedForce);
+
+Mass = cartPoleSystem.getMassMatrix()
+Gravity = cartPoleSystem.getGravityVector()
+Coriolis = cartPoleSystem.getCoriolisVector()
+Force = cartPoleSystem.getGeneralizedForceVector()
