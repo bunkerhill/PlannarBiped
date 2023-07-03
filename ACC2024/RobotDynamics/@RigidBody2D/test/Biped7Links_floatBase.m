@@ -148,3 +148,5 @@ B_mtx = jacobian(Phi_0,generalCoordinates).';
 % ºŸ…Ë÷ß≥≈Õ»Œ™”“Õ»
 Phi_1 = [right_footBody.getCOMPosition(); right_footBody.getCOMAngle()];
 E_mtx = jacobian(Phi_1,generalCoordinates).';
+right_footBody = RigidBody2D('Name', 'right_foot', 'CoordinateFrame', right_foot, 'Mass', m_foot, 'CenterOfMassInBodyFrame', com_foot, 'MomentOfInertia', I_foot);
+
