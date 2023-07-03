@@ -53,7 +53,7 @@ classdef RigidBody2D
             position = [position; obj.CoordinateFrame.RotationFromBase.Theta];
         end
         
-        function angle = getCOMAngle(obj)
+        function angle = getRigidBodyAngle(obj)
             angle = obj.CoordinateFrame.RotationFromBase.Theta;
         end
 
