@@ -44,6 +44,10 @@ cartPoleSystem = cartPoleSystem.AddRigidBody(poleBody);
 
 cartPoleSystem = cartPoleSystem.AddGeneralizedForce(InputGeneralizedForce);
 
+
+cartPoleSystem.getTotalKineticEnergy()
+
+
 Mass = cartPoleSystem.getMassMatrix()
 Gravity = cartPoleSystem.getGravityVector()
 Coriolis = cartPoleSystem.getCoriolisVector()

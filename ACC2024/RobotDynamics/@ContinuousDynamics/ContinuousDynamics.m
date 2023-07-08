@@ -15,7 +15,9 @@ classdef ContinuousDynamics
 
         % @type vector of GeneralizedForce
         GeneralizedForces
-        
+
+        % @type vector of Contact2D
+        ContactConstraints
     end
     
     methods
@@ -38,6 +40,34 @@ classdef ContinuousDynamics
             for i=1:length(obj.GeneralizedForces)
                 GeneralizedForceVector = GeneralizedForceVector + obj.GeneralizedForces(i).getGeneralizedForce(obj.GeneralizedCoordinates);
             end
+        end
+
+        function obj = AddContactConstraints(obj, ContactConstraint)
+            obj.ContactConstraints = [obj.ContactConstraints, ContactConstraint];
+        end
+
+        function ContactJacobian = getContactJacobian(obj)
+            % J(q) * \dot q = 0
+             ContactJacobian = [];
+             for i=1:length(obj.ContactConstraints)
+                 ContactJacobian = [ContactJacobian; obj.ContactConstraints(i).getContactJacobian(obj.GeneralizedCoordinates)];
+             end
+        end
+
+        function Jdot = getJdot(obj)
+            Jdot = [];
+            for i=1:length(obj.ContactConstraints)
+                 Jdot = [Jdot ; obj.ContactConstraints(i).getJdot(obj.GeneralizedCoordinates, obj.GeneralizedVelocities)];
+            end
+        end
+
+        function ConstraintForce = getConstraintForce(obj)
+            temp0 = simplify(obj.getContactJacobian()*inv(obj.getMassMatrix()));
+            temp1 = simplify(obj.getGeneralizedForceVector - obj.getCoriolisVector - obj.getGravityVector);
+            temp2 = simplify(temp0*temp1);
+            temp3 = simplify(temp2 + obj.getJdot()*obj.GeneralizedVelocities.');
+            temp4 = simplify(temp0*(obj.getContactJacobian().'));
+            ConstraintForce = simplify(-inv(temp4)*temp3);
         end
 
         function B_matrix = getInputMatrix(obj, inputColumnVector)
