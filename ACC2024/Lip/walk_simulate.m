@@ -49,7 +49,7 @@ xy_s_tank = [0;0];
 for i=2:length(T)
     i
     current_T = T(i-1);
-    if i > 100 && i <120
+    if i > 100 && i < 110
         ddxy_s = [-0.01;0];
     else
         ddxy_s = [0;0];
