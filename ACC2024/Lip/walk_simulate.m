@@ -34,7 +34,7 @@ dT = 0.005;
 %% simulation
 
 x0 = [0;0;0;0];
-T=0:dT:3;
+T=0:dT:2;
 x_tank = zeros(4,length(T));
 x_tank(:,1) = x0; 
 x_z = [0;0];
@@ -42,15 +42,17 @@ u_tank = [0;0];
 
 % moving surface
 ddxy_s = [0;0];
+ddxy_s_tank = [0;0];
 dxy_s = [0;0];
+dxy_s_tank = [0;0];
 xy_s = [0;0];
 xy_s_tank = [0;0];
 
 for i=2:length(T)
-    i
+    fprintf("%d\n",i);
     current_T = T(i-1);
-    if i > 100 && i < 110
-        ddxy_s = [-0.01;0];
+    if i >= 60 && i <= 260
+        ddxy_s = [-0.5;0];
     else
         ddxy_s = [0;0];
     end
@@ -61,6 +63,9 @@ for i=2:length(T)
 
     dxy_s = dxy_s + ddxy_s * dT;
     xy_s = xy_s + dxy_s * dT;
+
+    ddxy_s_tank = [ddxy_s_tank,ddxy_s];
+    dxy_s_tank = [dxy_s_tank,dxy_s];
     xy_s_tank = [xy_s_tank,xy_s];
 end
 
@@ -69,28 +74,49 @@ figure
 plot(T,x_tank(2,:))
 hold on
 plot(T,x_tank(4,:))
-
-figure
-plot(T,xy_s_tank(1,:))
-title('moving surface trajectory')
+title('com velocity')
 xlabel('t (s)') 
-ylabel('x (m)') 
-% legend({'foot position','COM'},'Location','southwest')
+ylabel('v (m/s)') 
+legend({'v_x','v_y'})
 
 figure
-i = 600;
-plot(x_tank(1,1:i))
-hold on
-plot(u_tank(1,1:i))
+plot(T,dxy_s_tank(1,:))
+title('moving surface x direction velocity')
+xlabel('t (s)') 
+ylabel('v (m/s)') 
 
 figure
-i = 600;
-plot(u_tank(1,1:i),u_tank(2,1:i))
-axis equal 
+plot(T,ddxy_s_tank(1,:))
+title('moving surface x direction acceleration')
+xlabel('t (s)') 
+ylabel('a (m/s^2)') 
+
+figure
+plot(T,dxy_s_tank(2,:))
+title('moving surface y direction velocity')
+xlabel('t (s)') 
+ylabel('v (m/s)') 
+
+figure
+plot(T,ddxy_s_tank(2,:))
+title('moving surface y direction acceleration')
+xlabel('t (s)') 
+ylabel('a (m/s^2)') 
+
+% figure
+% i = 100;
+% plot(x_tank(1,1:i))
+% hold on
+% plot(u_tank(1,1:i))
+% 
+% figure
+% i = 100;
+% plot(u_tank(1,1:i),u_tank(2,1:i))
+% axis equal 
 %%
 figure
-[X_min_next,X_max_next] = MPC_controller.ZMP_rangex_plot(3);
-[Y_min_next,Y_max_next] = MPC_controller.ZMP_rangey_plot(3);
+[X_min_next,X_max_next] = MPC_controller.ZMP_rangex_plot(4);
+[Y_min_next,Y_max_next] = MPC_controller.ZMP_rangey_plot(4);
 for i=1:round(length(X_min_next)/2)
     rectangle('Position',[X_min_next(i),Y_min_next(i),X_max_next(i)-X_min_next(i),Y_max_next(i)-Y_min_next(i)],'FaceColor','c')
     hold on
@@ -121,9 +147,9 @@ B1 = [0;
      -dT*g/L];
 
 C1 = [0;
-     -ddxy_s(1)];
+     -ddxy_s(1)*dT];
 C2 = [0;
-     -ddxy_s(2)];
+     -ddxy_s(2)*dT];
 
 A = blkdiag(A1,A1);
 B = blkdiag(B1,B1);

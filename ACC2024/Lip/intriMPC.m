@@ -42,11 +42,11 @@ classdef intriMPC
             obj.ddx_s_max = ddx_s_max_in;
             obj.ddx_s_min = ddx_s_min_in;
             obj.deta = 0.01;
-            obj.T_h = 0.65;
-            obj.foot_length = 0.02;
+            obj.T_h = 1;
+            obj.foot_length = 0.1;
             obj.step_size = 0.05;
-            obj.step_width = 0.1;
-            obj.single_support_time = 0.2;
+            obj.step_width = 0.15;
+            obj.single_support_time = 0.3;
             obj.double_support_time = 0.1;
             obj.gait_time = obj.single_support_time + obj.double_support_time;
             
@@ -102,8 +102,8 @@ classdef intriMPC
              % start in double support
             timer = 0.2;
             if current_T < timer
-                y_min_next = -0.5 * obj.step_width - 0.5 * obj.foot_length;
-                y_max_next = 0.5 * obj.step_width + 0.5 * obj.foot_length;
+                y_min_next = -0.5 * obj.step_width - 0.5 * obj.foot_length/2;
+                y_max_next = 0.5 * obj.step_width + 0.5 * obj.foot_length/2;
             else
                 current_T = current_T - timer;
                 one_gait_num = round(obj.gait_time/obj.deta);
@@ -111,11 +111,11 @@ classdef intriMPC
                 temp1 = floor(count/one_gait_num);
                 temp2 = mod(count,one_gait_num);
                 if temp2 < round(obj.single_support_time/obj.deta)
-                    y_min_next = (-1)^temp1 * 0.5 * obj.step_width - 0.5 * obj.foot_length;
-                    y_max_next = (-1)^temp1 * 0.5 * obj.step_width + 0.5 * obj.foot_length;
+                    y_min_next = (-1)^temp1 * 0.5 * obj.step_width - 0.5 * obj.foot_length/2;
+                    y_max_next = (-1)^temp1 * 0.5 * obj.step_width + 0.5 * obj.foot_length/2;
                 else
-                    y_min_next = -0.5 * obj.step_width - 0.5 * obj.foot_length;
-                    y_max_next = 0.5 * obj.step_width + 0.5 * obj.foot_length;
+                    y_min_next = -0.5 * obj.step_width - 0.5 * obj.foot_length/2;
+                    y_max_next = 0.5 * obj.step_width + 0.5 * obj.foot_length/2;
                 end
             end
         end
@@ -149,7 +149,7 @@ classdef intriMPC
 
             % objective function
             H = eye(2*vector_length);
-            f = zeros(2*vector_length,1);
+
             % equality constraint
             omega = (obj.g/obj.L)^0.5;
             lamda = exp(-omega*obj.deta);
@@ -159,11 +159,11 @@ classdef intriMPC
             end
             Aeq1 = (1-lamda)/omega/(1-lamda^vector_length)*b_T;
             Aeq = blkdiag(Aeq1,Aeq1);
-            beq = [x(1)+x(2)/omega-p_z(1) - ddxy_s(1)/omega;
-                   x(3)+x(4)/omega-p_z(2) - ddxy_s(2)/omega];
+            beq = [x(1)+x(2)/omega-p_z(1);
+                   x(3)+x(4)/omega-p_z(2)];
 
             % control constraint
-            lb = [];
+            lb = []; 
             ub = [];
             % inequality constraint
             p = ones(vector_length,1);
@@ -179,7 +179,13 @@ classdef intriMPC
                  Y_max-p*p_z(2);
                  -(Y_min-p*p_z(2))];
 
-            Pz_dot = quadprog(H,f,A,b,Aeq,beq,lb,ub);
+            options = optimset('Algorithm','interior-point-convex','Display','off');
+
+            [Pz_dot,~,exitflag,~] = quadprog(H,[],A,b,Aeq,beq,lb,ub,[],options);
+            
+            if exitflag == -2
+               fprintf("---SOLUTION NOT FOUND---");
+            end
 
             pz_dot = [Pz_dot(1);
                       Pz_dot(vector_length+1)];
