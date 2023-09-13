@@ -28,19 +28,12 @@ classdef intriMPC
         % com height
         L
         
-        % max moving acc
-        ddx_s_max
-        
-        % min moving acc
-        ddx_s_min
     end
 
     methods
-        function obj = intriMPC(g_in,L_in,ddx_s_max_in,ddx_s_min_in)
+        function obj = intriMPC(g_in,L_in)
             obj.g = g_in;
             obj.L = L_in;
-            obj.ddx_s_max = ddx_s_max_in;
-            obj.ddx_s_min = ddx_s_min_in;
             obj.deta = 0.01;
             obj.T_h = 1;
             obj.foot_length = 0.02;

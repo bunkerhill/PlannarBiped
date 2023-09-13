@@ -27,12 +27,6 @@ classdef contiMPC
         
         % com height
         L
-        
-        % max moving acc
-        ddxy_s_max
-        
-        % min moving acc
-        ddxy_s_min
 
         % contingency parameters
         j_max
@@ -47,8 +41,6 @@ classdef contiMPC
         function obj = contiMPC(g_in,L_in,ddxy_s_max_in,ddxy_s_min_in)
             obj.g = g_in;
             obj.L = L_in;
-            obj.ddxy_s_max = ddxy_s_max_in;
-            obj.ddxy_s_min = ddxy_s_min_in;
             obj.deta = 0.01;
             obj.T_h = 1;
             obj.foot_length = 0.02;
@@ -59,11 +51,10 @@ classdef contiMPC
             obj.gait_time = obj.single_support_time + obj.double_support_time;
 
             % contingency parameters
-            obj.j_max
-            obj.j_min
-            obj.a_max
-            obj.a_min
-            obj.T_u
+            obj.j_max = [1,1];
+            obj.j_min = [-1,-1];
+            obj.a_max = ddxy_s_max_in;
+            obj.a_min = ddxy_s_min_in;
             
         end
         
@@ -71,6 +62,11 @@ classdef contiMPC
         function pz_dot = MPC(obj,x,p_z,ddxy_s,current_T)
             
             vector_length = round(obj.T_h/obj.deta);
+            
+            obj.T_u(1) = (obj.a_max(1)-ddxy_s(1))/obj.j_max(1);
+            obj.T_u(2) = (obj.a_max(2)-ddxy_s(2))/obj.j_max(2);
+            obj.T_l(1) = (obj.a_min(1)-ddxy_s(1))/obj.j_min(1);
+            obj.T_l(2) = (obj.a_min(2)-ddxy_s(2))/obj.j_min(2);
 
             % objective function
             H = eye(3*vector_length);
@@ -86,25 +82,19 @@ classdef contiMPC
             Aeq1 = (1-lamda)/omega/(1-lamda^vector_length)*b_T;
             beq1 = x(1)+x(2)/omega-p_z(1);
 
-%                    x(3)+x(4)/omega-p_z(2)];
-
             Aeq2 = zeros(2,3*vector_length);
             Aeq2(1,1) = 1;
             Aeq2(1,1+vector_length) = -1;
             Aeq2(2,1) = 1;
             Aeq2(2,1+2*vector_length) = -1;
- 
-%             Aeq2(3,1+vector_length) = 1;
-%             Aeq2(3,1+3*vector_length) = -1;
-%             Aeq2(4,1+vector_length) = 1;
-%             Aeq2(4,1+5*vector_length) = -1;
 
 
             Aeq = [blkdiag(Aeq1,Aeq1,Aeq1);
                    Aeq2];
-            beq = [beq1 + 1/(omega^2)*ddxy_s(1)*(exp(-omega)-1);
-                   beq1 - obj.ddxy_s_max(1)/omega;
-                   beq1 - obj.ddxy_s_min(1)/omega;
+               
+            beq = [beq1 + 1/(omega^2)*ddxy_s(1)*(exp(-omega*obj.T_h)-1);
+                   beq1 - 1/(omega^2)*( obj.ddxy_s(1)*(1-exp(-omega*obj.T_u(1))) + obj.a_max(1)*(exp(-omega*obj.T_u(1)))-exp(-omega*obj.T_c) ) - 1/(omega^3)*obj.j_max(1)*(1-(1+obj.T_u(1)*omega)*exp(-omega*obj.T_u(1)));
+                   beq1 - 1/(omega^2)*( obj.ddxy_s(1)*(1-exp(-omega*obj.T_l(1))) + obj.a_min(1)*(exp(-omega*obj.T_l(1)))-exp(-omega*obj.T_c) ) - 1/(omega^3)*obj.j_min(1)*(1-(1+obj.T_l(1)*omega)*exp(-omega*obj.T_l(1)));
                    0;
                    0];
             % control constraint
@@ -118,12 +108,9 @@ classdef contiMPC
                   -P];
 
             [X_min,X_max] = ZMP_rangex(obj,current_T);
-%             [Y_min,Y_max] = ZMP_rangey(obj,current_T);
 
             b1 = [X_max-p*p_z(1);
                  -(X_min-p*p_z(1))];
-%                  Y_max-p*p_z(2);
-%                  -(Y_min-p*p_z(2))];
 
             A = blkdiag(A1,A1,A1);
             b = [b1;
@@ -165,8 +152,8 @@ classdef contiMPC
             Aeq = [blkdiag(Aeq1,Aeq1,Aeq1);
                    Aeq2];
             beq = [beq1 + 1/(omega^2)*ddxy_s(2)*(exp(-omega*obj.T_h)-1);
-                   beq1 - 1/(omega^2)*( obj.ddxy_s_max(2)*(1-exp(-omega*obj.T_u(2))) + obj.a_max(2)*(exp(-omega*obj.T_u(2)))-exp(-omega*obj.T_c) ) - 1/(omega^3)*obj.j_max(2)*(1-(1+obj.T_u(2)*omega)*exp(-omega*obj.T_u(2)));
-                   beq1 - 1/(omega^2)*( obj.ddxy_s_min(2)*(1-exp(-omega*obj.T_u(2))) + obj.a_min(2)*(exp(-omega*obj.T_u(2)))-exp(-omega*obj.T_c) ) - 1/(omega^3)*obj.j_min(2)*(1-(1+obj.T_u(2)*omega)*exp(-omega*obj.T_u(2)));
+                   beq1 - 1/(omega^2)*( obj.ddxy_s(2)*(1-exp(-omega*obj.T_u(2))) + obj.a_max(2)*(exp(-omega*obj.T_u(2)))-exp(-omega*obj.T_c) ) - 1/(omega^3)*obj.j_max(2)*(1-(1+obj.T_u(2)*omega)*exp(-omega*obj.T_u(2)));
+                   beq1 - 1/(omega^2)*( obj.ddxy_s(2)*(1-exp(-omega*obj.T_l(2))) + obj.a_min(2)*(exp(-omega*obj.T_l(2)))-exp(-omega*obj.T_c) ) - 1/(omega^3)*obj.j_min(2)*(1-(1+obj.T_l(2)*omega)*exp(-omega*obj.T_l(2)));
                    0;
                    0];
             % control constraint

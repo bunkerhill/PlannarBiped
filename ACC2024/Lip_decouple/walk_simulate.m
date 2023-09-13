@@ -12,7 +12,7 @@ ddxy_s_max = [0;0];
 ddxy_s_min = [0;0];
 
 % choose a MPC controller
-MPC_controller = intriMPC(g,L,ddxy_s_max,ddxy_s_min);
+MPC_controller = intriMPC(g,L);
 
 % figure
 % plot(X_min_next,Y_min_next)
