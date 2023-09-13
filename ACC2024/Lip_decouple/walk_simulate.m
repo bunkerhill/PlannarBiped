@@ -30,11 +30,14 @@ ddxy_s_min = [-1;0];
 MPC_controller = contiMPC(g,L,ddxy_s_max,ddxy_s_min);
 
 % time step
-dT = 0.005;
+dT = 0.01;
+
+% simulation time
+T_s = 2;
 %% simulation
 
 x0 = [0;0;0;0];
-T=0:dT:2;
+T=0:dT:T_s;
 x_tank = zeros(4,length(T));
 x_tank(:,1) = x0; 
 x_z = [0;0];
@@ -51,8 +54,8 @@ xy_s_tank = [0;0];
 for i=2:length(T)
     fprintf("%d\n",i);
     current_T = T(i-1);
-    if i >= 60 && i <= 260
-        ddxy_s = [0.3;0];
+    if i >= 30 && i <= 130
+        ddxy_s = [0.6;0];
     else
         ddxy_s = [0;0];
     end
@@ -103,11 +106,23 @@ title('moving surface y direction acceleration')
 xlabel('t (s)') 
 ylabel('a (m/s^2)') 
 
-% figure
-% i = 200;
-% plot(x_tank(1,1:i))
-% hold on
-% plot(u_tank(1,1:i))
+figure
+plot(T,x_tank(1,:))
+hold on
+plot(T,u_tank(1,:))
+title('com and zmp postion in x direction')
+xlabel('t (s)') 
+ylabel('position (m)') 
+legend({'COM','ZMP'})
+
+figure
+plot(T,x_tank(3,:))
+hold on
+plot(T,u_tank(2,:))
+title('com and zmp postion in y direction')
+xlabel('t (s)') 
+ylabel('position (m)') 
+legend({'COM','ZMP'})
 % 
 % figure
 % i = 200;
@@ -115,10 +130,10 @@ ylabel('a (m/s^2)')
 % axis equal 
 %%
 figure
-[X_min_next,X_max_next] = MPC_controller.ZMP_rangex_plot(4);
-[Y_min_next,Y_max_next] = MPC_controller.ZMP_rangey_plot(4);
-for i=1:round(length(X_min_next)/2)
-    rectangle('Position',[X_min_next(i),Y_min_next(i),X_max_next(i)-X_min_next(i),Y_max_next(i)-Y_min_next(i)],'FaceColor','c')
+[X_min_next,X_max_next] = MPC_controller.ZMP_rangex_plot(T_s);
+[Y_min_next,Y_max_next] = MPC_controller.ZMP_rangey_plot(T_s);
+for i=1:length(X_min_next)
+    rectangle('Position',[X_min_next(i),Y_min_next(i),X_max_next(i)-X_min_next(i),Y_max_next(i)-Y_min_next(i)])
     hold on
 end
 
