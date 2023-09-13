@@ -93,10 +93,11 @@ classdef contiMPC
                    Aeq2];
                
             beq = [beq1 + 1/(omega^2)*ddxy_s(1)*(exp(-omega*obj.T_h)-1);
-                   beq1 - 1/(omega^2)*( obj.ddxy_s(1)*(1-exp(-omega*obj.T_u(1))) + obj.a_max(1)*(exp(-omega*obj.T_u(1)))-exp(-omega*obj.T_c) ) - 1/(omega^3)*obj.j_max(1)*(1-(1+obj.T_u(1)*omega)*exp(-omega*obj.T_u(1)));
-                   beq1 - 1/(omega^2)*( obj.ddxy_s(1)*(1-exp(-omega*obj.T_l(1))) + obj.a_min(1)*(exp(-omega*obj.T_l(1)))-exp(-omega*obj.T_c) ) - 1/(omega^3)*obj.j_min(1)*(1-(1+obj.T_l(1)*omega)*exp(-omega*obj.T_l(1)));
+                   beq1 - 1/(omega^2)*( ddxy_s(1)*(1-exp(-omega*obj.T_u(1))) + obj.a_max(1)*(exp(-omega*obj.T_u(1)))-exp(-omega*obj.T_h) ) - 1/(omega^3)*obj.j_max(1)*(1-(1+obj.T_u(1)*omega)*exp(-omega*obj.T_u(1)));
+                   beq1 - 1/(omega^2)*( ddxy_s(1)*(1-exp(-omega*obj.T_l(1))) + obj.a_min(1)*(exp(-omega*obj.T_l(1)))-exp(-omega*obj.T_h) ) - 1/(omega^3)*obj.j_min(1)*(1-(1+obj.T_l(1)*omega)*exp(-omega*obj.T_l(1)));
                    0;
-                   0];
+                   0]
+
             % control constraint
             lb = [];
             ub = [];
@@ -152,8 +153,8 @@ classdef contiMPC
             Aeq = [blkdiag(Aeq1,Aeq1,Aeq1);
                    Aeq2];
             beq = [beq1 + 1/(omega^2)*ddxy_s(2)*(exp(-omega*obj.T_h)-1);
-                   beq1 - 1/(omega^2)*( obj.ddxy_s(2)*(1-exp(-omega*obj.T_u(2))) + obj.a_max(2)*(exp(-omega*obj.T_u(2)))-exp(-omega*obj.T_c) ) - 1/(omega^3)*obj.j_max(2)*(1-(1+obj.T_u(2)*omega)*exp(-omega*obj.T_u(2)));
-                   beq1 - 1/(omega^2)*( obj.ddxy_s(2)*(1-exp(-omega*obj.T_l(2))) + obj.a_min(2)*(exp(-omega*obj.T_l(2)))-exp(-omega*obj.T_c) ) - 1/(omega^3)*obj.j_min(2)*(1-(1+obj.T_l(2)*omega)*exp(-omega*obj.T_l(2)));
+                   beq1 - 1/(omega^2)*( ddxy_s(2)*(1-exp(-omega*obj.T_u(2))) + obj.a_max(2)*(exp(-omega*obj.T_u(2)))-exp(-omega*obj.T_h) ) - 1/(omega^3)*obj.j_max(2)*(1-(1+obj.T_u(2)*omega)*exp(-omega*obj.T_u(2)));
+                   beq1 - 1/(omega^2)*( ddxy_s(2)*(1-exp(-omega*obj.T_l(2))) + obj.a_min(2)*(exp(-omega*obj.T_l(2)))-exp(-omega*obj.T_h) ) - 1/(omega^3)*obj.j_min(2)*(1-(1+obj.T_l(2)*omega)*exp(-omega*obj.T_l(2)));
                    0;
                    0];
             % control constraint
