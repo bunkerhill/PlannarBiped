@@ -1,4 +1,4 @@
-classdef contiMPC
+classdef intriMPC
 
     properties
         % one step time
@@ -29,37 +29,37 @@ classdef contiMPC
         L
         
         % max moving acc
-        ddxy_s_max
+        ddx_s_max
         
         % min moving acc
-        ddxy_s_min
+        ddx_s_min
     end
 
     methods
-        function obj = contiMPC(g_in,L_in,ddxy_s_max_in,ddxy_s_min_in)
+        function obj = intriMPC(g_in,L_in,ddx_s_max_in,ddx_s_min_in)
             obj.g = g_in;
             obj.L = L_in;
-            obj.ddxy_s_max = ddxy_s_max_in;
-            obj.ddxy_s_min = ddxy_s_min_in;
+            obj.ddx_s_max = ddx_s_max_in;
+            obj.ddx_s_min = ddx_s_min_in;
             obj.deta = 0.01;
             obj.T_h = 1;
             obj.foot_length = 0.02;
-            obj.step_width = 0.1;
             obj.step_size = 0.05;
+            obj.step_width = 0.1;
             obj.single_support_time = 0.2;
             obj.double_support_time = 0.1;
             obj.gait_time = obj.single_support_time + obj.double_support_time;
             
         end
-        
+
         % solve the mpc problem
         function pz_dot = MPC(obj,x,p_z,ddxy_s,current_T)
             
             vector_length = round(obj.T_h/obj.deta);
 
             % objective function
-            H = blkdiag(eye(6*vector_length));
-            f = zeros(6*vector_length,1);
+            H = eye(2*vector_length);
+
             % equality constraint
             omega = (obj.g/obj.L)^0.5;
             lamda = exp(-omega*obj.deta);
@@ -67,39 +67,15 @@ classdef contiMPC
             for i = 1:vector_length
                 b_T(i) = lamda^(i-1);
             end
-
             Aeq1 = (1-lamda)/omega/(1-lamda^vector_length)*b_T;
-            Aeq11 = blkdiag(Aeq1,Aeq1);
-            beq1 = [x(1)+x(2)/omega-p_z(1);
-                   x(3)+x(4)/omega-p_z(2)];
+            Aeq = blkdiag(Aeq1,Aeq1);
+            beq = [x(1)+x(2)/omega-p_z(1)+1/(omega^2)*ddxy_s(1)*(exp(-omega*obj.T_h)-1);
+                   x(3)+x(4)/omega-p_z(2)+1/(omega^2)*ddxy_s(2)*(exp(-omega*obj.T_h)-1)];
+%             beq = [x(1)+x(2)/omega-p_z(1);
+%                    x(3)+x(4)/omega-p_z(2)];
 
-            Aeq2 = zeros(4,6*vector_length);
-            Aeq2(1,1) = 1;
-            Aeq2(1,1+2*vector_length) = -1;
-            Aeq2(2,1) = 1;
-            Aeq2(2,1+4*vector_length) = -1;
-
-            Aeq2(3,1+vector_length) = 1;
-            Aeq2(3,1+3*vector_length) = -1;
-            Aeq2(4,1+vector_length) = 1;
-            Aeq2(4,1+5*vector_length) = -1;
-
-            % Aeq = blkdiag(Aeq1,Aeq1,Aeq1);
-            % beq = [beq1 - ddx_s/omega;
-            %        beq1 - ddx_s_max/omega;
-            %        beq1 - ddx_s_min/omega];
-
-            Aeq = [blkdiag(Aeq11,Aeq11,Aeq11);
-                   Aeq2];
-            beq = [beq1 - ddxy_s/omega;
-                   beq1 - obj.ddxy_s_max/omega;
-                   beq1 - obj.ddxy_s_min/omega;
-                   0;
-                   0;
-                   0;
-                   0];
             % control constraint
-            lb = [];
+            lb = []; 
             ub = [];
             % inequality constraint
             p = ones(vector_length,1);
@@ -107,25 +83,24 @@ classdef contiMPC
             P = tril(temp)*obj.deta;
             A1 = [P;
                   -P];
-            A11 = blkdiag(A1,A1);
-
+            A = blkdiag(A1,A1);
             [X_min,X_max] = ZMP_rangex(obj,current_T);
             [Y_min,Y_max] = ZMP_rangey(obj,current_T);
-
-            b1 = [X_max-p*p_z(1);
+            b = [X_max-p*p_z(1);
                  -(X_min-p*p_z(1));
                  Y_max-p*p_z(2);
                  -(Y_min-p*p_z(2))];
 
-            A = blkdiag(A11,A11,A11);
-            b = [b1;
-                 b1;
-                 b1];
+            options = optimset('Algorithm','interior-point-convex','Display','off');
 
-            Pz_dot = quadprog(H,f,A,b,Aeq,beq,lb,ub);
+            [Pz_dot,~,exitflag,~] = quadprog(H,[],A,b,Aeq,beq,lb,ub,[],options);
+            
+            if exitflag == -2
+               fprintf("---SOLUTION NOT FOUND---");
+            end
 
             pz_dot = [Pz_dot(1);
-                     Pz_dot(vector_length+1)];
+                      Pz_dot(vector_length+1)];
 
         end
 

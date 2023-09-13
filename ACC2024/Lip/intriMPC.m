@@ -43,15 +43,65 @@ classdef intriMPC
             obj.ddx_s_min = ddx_s_min_in;
             obj.deta = 0.01;
             obj.T_h = 1;
-            obj.foot_length = 0.1;
+            obj.foot_length = 0.02;
             obj.step_size = 0.05;
-            obj.step_width = 0.15;
-            obj.single_support_time = 0.3;
+            obj.step_width = 0.1;
+            obj.single_support_time = 0.2;
             obj.double_support_time = 0.1;
             obj.gait_time = obj.single_support_time + obj.double_support_time;
             
         end
-        
+
+        % solve the mpc problem
+        function pz_dot = MPC(obj,x,p_z,ddxy_s,current_T)
+            
+            vector_length = round(obj.T_h/obj.deta);
+
+            % objective function
+            H = eye(2*vector_length);
+
+            % equality constraint
+            omega = (obj.g/obj.L)^0.5;
+            lamda = exp(-omega*obj.deta);
+            b_T = zeros(1,vector_length);
+            for i = 1:vector_length
+                b_T(i) = lamda^(i-1);
+            end
+            Aeq1 = (1-lamda)/omega/(1-lamda^vector_length)*b_T;
+            Aeq = blkdiag(Aeq1,Aeq1);
+            beq = [x(1)+x(2)/omega-p_z(1);
+                   x(3)+x(4)/omega-p_z(2)];
+
+            % control constraint
+            lb = []; 
+            ub = [];
+            % inequality constraint
+            p = ones(vector_length,1);
+            temp = ones(vector_length);
+            P = tril(temp)*obj.deta;
+            A1 = [P;
+                  -P];
+            A = blkdiag(A1,A1);
+            [X_min,X_max] = ZMP_rangex(obj,current_T);
+            [Y_min,Y_max] = ZMP_rangey(obj,current_T);
+            b = [X_max-p*p_z(1);
+                 -(X_min-p*p_z(1));
+                 Y_max-p*p_z(2);
+                 -(Y_min-p*p_z(2))];
+
+            options = optimset('Algorithm','interior-point-convex','Display','off');
+
+            [Pz_dot,~,exitflag,~] = quadprog(H,[],A,b,Aeq,beq,lb,ub,[],options);
+            
+            if exitflag == -2
+               fprintf("---SOLUTION NOT FOUND---");
+            end
+
+            pz_dot = [Pz_dot(1);
+                      Pz_dot(vector_length+1)];
+
+        end
+
         % Generate ZMP range
         function [X_min_next,X_max_next] = ZMP_rangex(obj,current_T)
 
@@ -102,8 +152,8 @@ classdef intriMPC
              % start in double support
             timer = 0.2;
             if current_T < timer
-                y_min_next = -0.5 * obj.step_width - 0.5 * obj.foot_length/2;
-                y_max_next = 0.5 * obj.step_width + 0.5 * obj.foot_length/2;
+                y_min_next = -0.5 * obj.step_width - 0.5 * obj.foot_length;
+                y_max_next = 0.5 * obj.step_width + 0.5 * obj.foot_length;
             else
                 current_T = current_T - timer;
                 one_gait_num = round(obj.gait_time/obj.deta);
@@ -111,11 +161,11 @@ classdef intriMPC
                 temp1 = floor(count/one_gait_num);
                 temp2 = mod(count,one_gait_num);
                 if temp2 < round(obj.single_support_time/obj.deta)
-                    y_min_next = (-1)^temp1 * 0.5 * obj.step_width - 0.5 * obj.foot_length/2;
-                    y_max_next = (-1)^temp1 * 0.5 * obj.step_width + 0.5 * obj.foot_length/2;
+                    y_min_next = (-1)^temp1 * 0.5 * obj.step_width - 0.5 * obj.foot_length;
+                    y_max_next = (-1)^temp1 * 0.5 * obj.step_width + 0.5 * obj.foot_length;
                 else
-                    y_min_next = -0.5 * obj.step_width - 0.5 * obj.foot_length/2;
-                    y_max_next = 0.5 * obj.step_width + 0.5 * obj.foot_length/2;
+                    y_min_next = -0.5 * obj.step_width - 0.5 * obj.foot_length;
+                    y_max_next = 0.5 * obj.step_width + 0.5 * obj.foot_length;
                 end
             end
         end
@@ -126,7 +176,23 @@ classdef intriMPC
             X_min_next = zeros(vector_length,1);
             X_max_next = zeros(vector_length,1);
             for i = 1:vector_length
-                [X_min_next(i),X_max_next(i)] = one_ZMP_rangex(obj,(i-1)*obj.deta);
+
+                % start in double support
+                current_T = (i-1)*obj.deta;
+                timer = 0.2;
+                if current_T < timer
+                    X_min_next(i) = - 0.5 * obj.foot_length;
+                    X_max_next(i) = 0.5 * obj.foot_length;
+    
+                else
+                    current_T = current_T - timer;
+                    one_gait_num = round(obj.gait_time/obj.deta);
+                    count = round(current_T/obj.deta);
+                    temp1 = floor(count/one_gait_num);
+                    X_min_next(i) = temp1 * obj.step_size - 0.5 * obj.foot_length;
+                    X_max_next(i) = temp1 * obj.step_size + 0.5 * obj.foot_length;
+
+                end
             end
 
         end
@@ -137,58 +203,23 @@ classdef intriMPC
             Y_min_next = zeros(vector_length,1);
             Y_max_next = zeros(vector_length,1);
             for i = 1:vector_length
-                [Y_min_next(i),Y_max_next(i)] = one_ZMP_rangey(obj,(i-1)*obj.deta);
+
+                 % start in double support
+                current_T = (i-1)*obj.deta;
+                timer = 0.2;
+                if current_T < timer
+                    Y_min_next(i) = -0.5 * obj.step_width - 0.5 * obj.foot_length;
+                    Y_max_next(i) = 0.5 * obj.step_width + 0.5 * obj.foot_length;
+                else
+                    current_T = current_T - timer;
+                    one_gait_num = round(obj.gait_time/obj.deta);
+                    count = round(current_T/obj.deta);
+                    temp1 = floor(count/one_gait_num);
+                    Y_min_next(i) = (-1)^temp1 * 0.5 * obj.step_width - 0.5 * obj.foot_length;
+                    Y_max_next(i) = (-1)^temp1 * 0.5 * obj.step_width + 0.5 * obj.foot_length;
+                end
+
             end
-
-        end
-
-        % solve the mpc problem
-        function pz_dot = MPC(obj,x,p_z,ddxy_s,current_T)
-            
-            vector_length = round(obj.T_h/obj.deta);
-
-            % objective function
-            H = eye(2*vector_length);
-
-            % equality constraint
-            omega = (obj.g/obj.L)^0.5;
-            lamda = exp(-omega*obj.deta);
-            b_T = zeros(1,vector_length);
-            for i = 1:vector_length
-                b_T(i) = lamda^(i-1);
-            end
-            Aeq1 = (1-lamda)/omega/(1-lamda^vector_length)*b_T;
-            Aeq = blkdiag(Aeq1,Aeq1);
-            beq = [x(1)+x(2)/omega-p_z(1);
-                   x(3)+x(4)/omega-p_z(2)];
-
-            % control constraint
-            lb = []; 
-            ub = [];
-            % inequality constraint
-            p = ones(vector_length,1);
-            temp = ones(vector_length);
-            P = tril(temp)*obj.deta;
-            A1 = [P;
-                  -P];
-            A = blkdiag(A1,A1);
-            [X_min,X_max] = ZMP_rangex(obj,current_T);
-            [Y_min,Y_max] = ZMP_rangey(obj,current_T);
-            b = [X_max-p*p_z(1);
-                 -(X_min-p*p_z(1));
-                 Y_max-p*p_z(2);
-                 -(Y_min-p*p_z(2))];
-
-            options = optimset('Algorithm','interior-point-convex','Display','off');
-
-            [Pz_dot,~,exitflag,~] = quadprog(H,[],A,b,Aeq,beq,lb,ub,[],options);
-            
-            if exitflag == -2
-               fprintf("---SOLUTION NOT FOUND---");
-            end
-
-            pz_dot = [Pz_dot(1);
-                      Pz_dot(vector_length+1)];
 
         end
 
