@@ -218,6 +218,71 @@ classdef intriMPC
 
         end
 
+        function [X_min_next,X_max_next] = get_ZMP_rangex(obj,time_period)
+
+            vector_length = round(time_period/obj.deta);
+            X_min_next = zeros(vector_length,1);
+            X_max_next = zeros(vector_length,1);
+            for i = 1:vector_length
+
+                % start in double support
+                current_T = (i-1)*obj.deta;
+                timer = 0.2;
+                if current_T < timer
+                    X_min_next(i) = - 0.5 * obj.foot_length;
+                    X_max_next(i) = 0.5 * obj.foot_length;
+    
+                else
+                    current_T = current_T - timer;
+                    one_gait_num = round(obj.gait_time/obj.deta);
+                    count = round(current_T/obj.deta);
+                    temp1 = floor(count/one_gait_num);
+                    temp2 = mod(count,one_gait_num);
+                    if temp2 < round(obj.single_support_time/obj.deta)
+                        X_min_next(i) = temp1 * obj.step_size - 0.5 * obj.foot_length;
+                        X_max_next(i) = temp1 * obj.step_size + 0.5 * obj.foot_length;
+                    else
+                        X_min_next(i) = temp1 * obj.step_size - 0.5 * obj.foot_length;
+                        X_max_next(i) = (temp1+1) * obj.step_size + 0.5 * obj.foot_length;
+                    end
+
+                end
+            end
+
+        end
+
+        function [Y_min_next,Y_max_next] = get_ZMP_rangey(obj,time_period)
+
+            vector_length = round(time_period/obj.deta);
+            Y_min_next = zeros(vector_length,1);
+            Y_max_next = zeros(vector_length,1);
+            for i = 1:vector_length
+
+                 % start in double support
+                current_T = (i-1)*obj.deta;
+                timer = 0.2;
+                if current_T < timer
+                    Y_min_next(i) = -0.5 * obj.step_width - 0.5 * obj.foot_length;
+                    Y_max_next(i) = 0.5 * obj.step_width + 0.5 * obj.foot_length;
+                else
+                    current_T = current_T - timer;
+                    one_gait_num = round(obj.gait_time/obj.deta);
+                    count = round(current_T/obj.deta);
+                    temp1 = floor(count/one_gait_num);
+                    temp2 = mod(count,one_gait_num);
+                    if temp2 < round(obj.single_support_time/obj.deta)
+                        Y_min_next(i) = (-1)^temp1 * 0.5 * obj.step_width - 0.5 * obj.foot_length;
+                        Y_max_next(i) = (-1)^temp1 * 0.5 * obj.step_width + 0.5 * obj.foot_length;
+                    else
+                        Y_min_next(i) = -0.5 * obj.step_width - 0.5 * obj.foot_length;
+                        Y_max_next(i) = 0.5 * obj.step_width + 0.5 * obj.foot_length;
+                    end
+                end
+
+            end
+
+        end
+
     end
 
 
