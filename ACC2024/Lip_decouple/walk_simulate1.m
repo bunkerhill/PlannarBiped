@@ -37,6 +37,10 @@ dxy_s_tank = [0;0];
 xy_s = [0;0];
 xy_s_tank = [0;0];
 
+normal_u = [];
+up_u = [];
+low_u = [];
+
 for i=2:length(T)
     fprintf("%d\n",i);
     current_T = T(i-1);
@@ -44,6 +48,15 @@ for i=2:length(T)
         ddxy_s = [0.56;0]; % 0.56  0.58
     else
         ddxy_s = [0;0];
+    end
+
+    if i == 60
+        X_z_dot = MPC_controller2.MPC_horizon(x_tank(:,i-1),x_z,ddxy_s,current_T);
+        for j = 1:(length(X_z_dot)/3)
+            x_z = x_z + dT * x_z_dot;
+        end
+
+        break
     end
 
     x_z_dot = MPC_controller2.MPC(x_tank(:,i-1),x_z,ddxy_s,current_T);

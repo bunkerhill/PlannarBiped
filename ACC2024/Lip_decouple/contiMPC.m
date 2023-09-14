@@ -190,6 +190,136 @@ classdef contiMPC
 
         end
 
+        function Pz_dot = MPC_horizon(obj,x,p_z,ddxy_s,current_T)
+%             obj.T_h = 1;
+            vector_length = round(obj.T_h/obj.deta);
+            
+            obj.T_u(1) = (obj.a_max(1)-ddxy_s(1))/obj.j_max(1);
+            obj.T_u(2) = (obj.a_max(2)-ddxy_s(2))/obj.j_max(2);
+            obj.T_l(1) = (obj.a_min(1)-ddxy_s(1))/obj.j_min(1);
+            obj.T_l(2) = (obj.a_min(2)-ddxy_s(2))/obj.j_min(2);
+
+            % objective function
+            H = eye(3*vector_length);
+
+            % equality constraint
+            omega = (obj.g/obj.L)^0.5;
+            lamda = exp(-omega*obj.deta);
+            b_T = zeros(1,vector_length);
+            for i = 1:vector_length
+                b_T(i) = lamda^(i-1);
+            end
+
+            Aeq1 = (1-lamda)/omega/(1-lamda^vector_length)*b_T;
+            beq1 = x(1)+x(2)/omega-p_z(1);
+
+            Aeq2 = zeros(2,3*vector_length);
+            Aeq2(1,1) = 1;
+            Aeq2(1,1+vector_length) = -1;
+            Aeq2(2,1) = 1;
+            Aeq2(2,1+2*vector_length) = -1;
+
+
+            Aeq = [blkdiag(Aeq1,Aeq1,Aeq1);
+                   Aeq2];
+               
+            beq = [beq1 + 1/(omega^2)*ddxy_s(1)*(exp(-omega*obj.T_h)-1);
+                   beq1 - 1/(omega^2)*( ddxy_s(1)*(1-exp(-omega*obj.T_u(1))) + obj.a_max(1)*(exp(-omega*obj.T_u(1)))-exp(-omega*obj.T_h) ) - 1/(omega^3)*obj.j_max(1)*(1-(1+obj.T_u(1)*omega)*exp(-omega*obj.T_u(1)));
+                   beq1 - 1/(omega^2)*( ddxy_s(1)*(1-exp(-omega*obj.T_l(1))) + obj.a_min(1)*(exp(-omega*obj.T_l(1)))-exp(-omega*obj.T_h) ) - 1/(omega^3)*obj.j_min(1)*(1-(1+obj.T_l(1)*omega)*exp(-omega*obj.T_l(1)));
+                   0;
+                   0];
+
+            % control constraint
+            lb = [];
+            ub = [];
+            % inequality constraint
+            p = ones(vector_length,1);
+            temp = ones(vector_length);
+            P = tril(temp)*obj.deta;
+            A1 = [P;
+                  -P];
+
+            [X_min,X_max] = ZMP_rangex(obj,current_T);
+
+            b1 = [X_max-p*p_z(1);
+                 -(X_min-p*p_z(1))];
+
+            A = blkdiag(A1,A1,A1);
+            b = [b1;
+                 b1;
+                 b1];
+            
+            options = optimset('Algorithm','interior-point-convex','Display','off');
+
+            [Xz_dot,~,exitflag,~] = quadprog(H,[],A,b,Aeq,beq,lb,ub,[],options);
+            
+            if exitflag == -2
+               fprintf("---X DIRECTION SOLUTION NOT FOUND---");
+            end
+
+
+            %----------------------------------------------------------------------------
+
+             % objective function
+            H = eye(3*vector_length);
+
+            % equality constraint
+            omega = (obj.g/obj.L)^0.5;
+            lamda = exp(-omega*obj.deta);
+            b_T = zeros(1,vector_length);
+            for i = 1:vector_length
+                b_T(i) = lamda^(i-1);
+            end
+
+            Aeq1 = (1-lamda)/omega/(1-lamda^vector_length)*b_T;
+            beq1 =  x(3)+x(4)/omega-p_z(2);
+
+            Aeq2 = zeros(2,3*vector_length);
+            Aeq2(1,1) = 1;
+            Aeq2(1,1+vector_length) = -1;
+            Aeq2(2,1) = 1;
+            Aeq2(2,1+2*vector_length) = -1;
+
+
+            Aeq = [blkdiag(Aeq1,Aeq1,Aeq1);
+                   Aeq2];
+            beq = [beq1 + 1/(omega^2)*ddxy_s(2)*(exp(-omega*obj.T_h)-1);
+                   beq1 - 1/(omega^2)*( ddxy_s(2)*(1-exp(-omega*obj.T_u(2))) + obj.a_max(2)*(exp(-omega*obj.T_u(2)))-exp(-omega*obj.T_h) ) - 1/(omega^3)*obj.j_max(2)*(1-(1+obj.T_u(2)*omega)*exp(-omega*obj.T_u(2)));
+                   beq1 - 1/(omega^2)*( ddxy_s(2)*(1-exp(-omega*obj.T_l(2))) + obj.a_min(2)*(exp(-omega*obj.T_l(2)))-exp(-omega*obj.T_h) ) - 1/(omega^3)*obj.j_min(2)*(1-(1+obj.T_l(2)*omega)*exp(-omega*obj.T_l(2)));
+                   0;
+                   0];
+            % control constraint
+            lb = [];
+            ub = [];
+            % inequality constraint
+            p = ones(vector_length,1);
+            temp = ones(vector_length);
+            P = tril(temp)*obj.deta;
+            A1 = [P;
+                  -P];
+
+            [Y_min,Y_max] = ZMP_rangey(obj,current_T);
+
+            b1 = [Y_max-p*p_z(2);
+                 -(Y_min-p*p_z(2))];
+
+            A = blkdiag(A1,A1,A1);
+            b = [b1;
+                 b1;
+                 b1];
+            
+            options = optimset('Algorithm','interior-point-convex','Display','off');
+
+            [Yz_dot,~,exitflag,~] = quadprog(H,[],A,b,Aeq,beq,lb,ub,[],options);
+            
+            if exitflag == -2
+               fprintf("---X DIRECTION SOLUTION NOT FOUND---");
+            end
+
+            Pz_dot = [Xz_dot,Yz_dot];
+%             obj.T_h = 1;
+        end
+
         % Generate ZMP range
         function [X_min_next,X_max_next] = ZMP_rangex(obj,current_T)
 
