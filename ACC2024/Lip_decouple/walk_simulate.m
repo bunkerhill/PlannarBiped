@@ -8,11 +8,11 @@ set(groot, 'defaultlegendinterpreter','latex')
 
 L=0.26;
 g=9.8;
-ddxy_s_max = [0.8;0];
-ddxy_s_min = [-0.8;0];
+ddxy_s_max = [1.2;0.5];
+ddxy_s_min = [-1.2;-0.5];
 
 % choose a MPC controller
-% MPC_controller1 = intriMPC(g,L);
+MPC_controller1 = intriMPC(g,L);
 MPC_controller2 = contiMPC(g,L,ddxy_s_max,ddxy_s_min);
 
 % time step
@@ -40,8 +40,8 @@ xy_s_tank = [0;0];
 for i=2:length(T)
     fprintf("%d\n",i);
     current_T = T(i-1);
-    if i >= 30 && i <= 130
-        ddxy_s = [0.56;0]; % 0.56  0.58
+    if i >= 30 && i <= 40
+        ddxy_s = [1.15;0.3]; % 0.56  0.58
     else
         ddxy_s = [0;0];
     end
@@ -62,6 +62,7 @@ end
 %% plot result
 [X_min_next,X_max_next] = MPC_controller2.get_ZMP_rangex(T_s+dT);
 [Y_min_next,Y_max_next] = MPC_controller2.get_ZMP_rangey(T_s+dT);
+
 % figure
 % plot(T,x_tank(2,:))
 % hold on
@@ -70,30 +71,30 @@ end
 % xlabel('t (s)') 
 % ylabel('v (m/s)') 
 % legend({'v_x','v_y'})
-% 
-% figure
-% plot(T,dxy_s_tank(1,:))
-% title('moving surface x direction velocity')
-% xlabel('t (s)') 
-% ylabel('v (m/s)') 
-% 
-% figure
-% plot(T,ddxy_s_tank(1,:))
-% title('moving surface x direction acceleration')
-% xlabel('t (s)') 
-% ylabel('a (m/s^2)') 
-% 
-% figure
-% plot(T,dxy_s_tank(2,:))
-% title('moving surface y direction velocity')
-% xlabel('t (s)') 
-% ylabel('v (m/s)') 
-% 
-% figure
-% plot(T,ddxy_s_tank(2,:))
-% title('moving surface y direction acceleration')
-% xlabel('t (s)') 
-% ylabel('a (m/s^2)') 
+
+figure
+plot(T,dxy_s_tank(1,:))
+title('moving surface x direction velocity')
+xlabel('t (s)') 
+ylabel('v (m/s)') 
+
+figure
+plot(T,ddxy_s_tank(1,:))
+title('moving surface x direction acceleration')
+xlabel('t (s)') 
+ylabel('a (m/s^2)') 
+
+figure
+plot(T,dxy_s_tank(2,:))
+title('moving surface y direction velocity')
+xlabel('t (s)') 
+ylabel('v (m/s)') 
+
+figure
+plot(T,ddxy_s_tank(2,:))
+title('moving surface y direction acceleration')
+xlabel('t (s)') 
+ylabel('a (m/s^2)') 
 
 figure
 plot(T,x_tank(1,:))
@@ -101,7 +102,7 @@ hold on
 plot(T,u_tank(1,:))
 plot(T+dT,X_min_next)
 plot(T+dT,X_max_next)
-title('com and zmp postion in x direction')
+title('com, zmp and zmp constraint postion in x direction')
 xlabel('t (s)') 
 ylabel('position (m)') 
 legend({'COM','ZMP','ZMP_lowConstraint','ZMP_upConstraint'})
