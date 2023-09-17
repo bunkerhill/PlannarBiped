@@ -41,17 +41,26 @@ normal_u = [];
 up_u = [];
 low_u = [];
 
+last_acc = [0,0];
 
 for i=2:length(T)
     fprintf("%d\n",i);
     current_T = T(i-1);
-    if i >= 30 && i <= 130
-        ddxy_s = [1.15;0.3]; % 0.56  0.58
+    if i >= 30
+        ddxy_s = random(:,i-1); % 0.56  0.58
+        if abs(ddxy_s(1) - last_acc(1)) > 0.5
+            ddxy_s(1) = last_acc(1) + sign((ddxy_s(1) - last_acc(1)))*0.5;
+        end
+
+        if abs(ddxy_s(2) - last_acc(2)) > 0.5
+            ddxy_s(2) = last_acc(2) + sign((ddxy_s(2) - last_acc(2)))*0.5;
+        end
+        last_acc = ddxy_s;
     else
         ddxy_s = [0;0];
     end
 
-    if i == 90
+    if i == 89
         X_z_dot = MPC_controller2.MPC_horizon(x_tank(:,i-1),x_z,ddxy_s,current_T);
         x_z_normal = x_z;
         for j = 1:(length(X_z_dot)/3)

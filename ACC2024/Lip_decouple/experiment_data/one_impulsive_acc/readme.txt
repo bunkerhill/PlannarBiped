@@ -5,7 +5,7 @@ ddxy_s_max = [1.2;0.5];        % maximal up bound of surface moving acceleration
 ddxy_s_min = [-1.2;-0.5];      % minimum low bound of surface moving acceleration (ax,ay)
 dT = 0.01;                            % simulation prediction time step
 T_s = 2;                               % simulation time
-from t=0.28s to t=0.38s         % period of surface moving acceleration with (0.57;0.3) m/(s^2)
+from t=0.28s to t=0.38s         % period of surface moving acceleration with (1.15;0.3) m/(s^2)
 time_stop = 0.48s                % MPC horizon beginning moment
 
 %% MPC
