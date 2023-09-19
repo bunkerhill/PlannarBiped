@@ -6,7 +6,7 @@ ddxy_s_min = [-1.15;-1.15];      % minimum low bound of surface moving accelerat
 dT = 0.01;                            % simulation prediction time step
 T_s = 2;                               % simulation time
 from t=0.28s to end(t=2s)         % period of surface moving acceleration with random acc
-time_stop = 0.87s                % MPC horizon beginning moment
+time_stop = 0.91s                % MPC horizon beginning moment
 
 
 %% MPC
@@ -21,8 +21,8 @@ double_support_time = 0.1;  % double support time
 gait_time = single_support_time + double_support_time ;
 
 %% contingency parameters
-j_max = [1,1];
-j_min = [-1,-1];
+j_max = [1,2];
+j_min = [-1,-2];
 
 %% code
 if i >= 30
