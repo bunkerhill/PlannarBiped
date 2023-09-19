@@ -1,6 +1,6 @@
-clc
-clear
-close all
+% clc
+% clear
+% close all
 %% set up
 set(groot, 'defaulttextinterpreter','latex')
 set(groot, 'defaultaxesticklabelinterpreter','latex')
@@ -8,8 +8,8 @@ set(groot, 'defaultlegendinterpreter','latex')
 
 L=0.26;
 g=9.8;
-ddxy_s_max = [1.2;0.5];
-ddxy_s_min = [-1.2;-0.5];
+ddxy_s_max = [0.5;1.5];
+ddxy_s_min = [-0.5;-1.5];
 
 % choose a MPC controller
 % MPC_controller1 = intriMPC(g,L);
@@ -19,7 +19,7 @@ MPC_controller2 = contiMPC(g,L,ddxy_s_max,ddxy_s_min);
 dT = 0.01;
 
 % simulation time
-T_s = 2;
+T_s = 2.5;
 %% simulation
 
 x0 = [0;0;0;0];
@@ -30,42 +30,51 @@ x_z = [0;0];
 u_tank = [0;0];
 
 % moving surface
+Ax = 0.005;
+T_periodx = 0.6;
+Ay = 0.02;
+T_periody = 0.6;
+
 ddxy_s = [0;0];
 ddxy_s_tank = [0;0];
-dxy_s = [0;0];
-dxy_s_tank = [0;0];
+dxy_s = [Ax*2*pi/T_periodx;Ay*2*pi/T_periody];
+dxy_s_tank = [Ax*2*pi/T_periodx;Ay*2*pi/T_periody];
 xy_s = [0;0];
 xy_s_tank = [0;0];
 
-normal_u = [];
 up_u = [];
 low_u = [];
 
+last_acc = [0,0];
 
 for i=2:length(T)
     fprintf("%d\n",i);
     current_T = T(i-1);
-    if i >= 30 && i <= 40
-        ddxy_s = [1.15;0.3]; % 0.56  0.58
+    if i >= 42
+        ddxy_s = [-Ax*2*pi/T_periodx*2*pi/T_periodx*sin((current_T-T(41))*2*pi/T_periodx);
+                  -Ay*2*pi/T_periody*2*pi/T_periody*sin((current_T-T(41))*2*pi/T_periody)];
+
+        dxy_s = dxy_s + ddxy_s * dT;
+        xy_s = xy_s + dxy_s * dT;
+    
+        ddxy_s_tank = [ddxy_s_tank,ddxy_s];
+        dxy_s_tank = [dxy_s_tank,dxy_s];
+        xy_s_tank = [xy_s_tank,xy_s];
     else
         ddxy_s = [0;0];
     end
 
-    if i == 50
+    if i == 102
         X_z_dot = MPC_controller2.MPC_horizon(x_tank(:,i-1),x_z,ddxy_s,current_T);
-        x_z_normal = x_z;
-        for j = 1:(length(X_z_dot)/3)
-            x_z_normal = x_z_normal + dT * X_z_dot(j,:)';
-            normal_u = [normal_u,x_z_normal];
-        end
+
         x_z_up = x_z;
-        for j = 1:(length(X_z_dot)/3)
-            x_z_up = x_z_up + dT * X_z_dot(j+(length(X_z_dot)/3),:)';
+        for j = 1:(length(X_z_dot)/2)
+            x_z_up = x_z_up + dT * X_z_dot(j,:)';
             up_u = [up_u,x_z_up];
         end
         x_z_low = x_z;
-        for j = 1:(length(X_z_dot)/3)
-            x_z_low = x_z_low + dT * X_z_dot(j+2*(length(X_z_dot)/3),:)';
+        for j = 1:(length(X_z_dot)/2)
+            x_z_low = x_z_low + dT * X_z_dot(j+(length(X_z_dot)/2),:)';
             low_u = [low_u,x_z_low];
         end
 
@@ -78,12 +87,12 @@ for i=2:length(T)
     u_tank = [u_tank, x_z];
     x_tank(:,i) = lip_dynamics(x_tank(:,i-1),x_z,ddxy_s,dT,L,g);
 
-    dxy_s = dxy_s + ddxy_s * dT;
-    xy_s = xy_s + dxy_s * dT;
-
-    ddxy_s_tank = [ddxy_s_tank,ddxy_s];
-    dxy_s_tank = [dxy_s_tank,dxy_s];
-    xy_s_tank = [xy_s_tank,xy_s];
+%     dxy_s = dxy_s + ddxy_s * dT;
+%     xy_s = xy_s + dxy_s * dT;
+% 
+%     ddxy_s_tank = [ddxy_s_tank,ddxy_s];
+%     dxy_s_tank = [dxy_s_tank,dxy_s];
+%     xy_s_tank = [xy_s_tank,xy_s];
 
     
 end
@@ -93,9 +102,10 @@ end
 [Y_min_next,Y_max_next] = MPC_controller2.ZMP_rangey(current_T);
 
 figure
-plot(normal_u(1,:))
-hold on
+
+
 plot(up_u(1,:))
+hold on
 plot(low_u(1,:))
 plot(X_min_next)
 plot(X_max_next)
@@ -105,9 +115,8 @@ ylabel('position (m)')
 legend({'normal_COM','up_COM','low_COM','ZMP_lowConstraint','ZMP_upConstraint'})
 
 figure
-plot(normal_u(2,:))
-hold on
 plot(up_u(2,:))
+hold on
 plot(low_u(2,:))
 plot(Y_min_next)
 plot(Y_max_next)
@@ -126,10 +135,10 @@ for i=1:length(X_min_next)
 end
 
 % connect
-u_tank = [u_tank, normal_u(:,1)];
+u_tank = [u_tank, up_u(:,1)];
 
 plot(u_tank(1,:),u_tank(2,:))
-plot(normal_u(1,:),normal_u(2,:))
+
 
 plot(up_u(1,:),up_u(2,:))
 plot(low_u(1,:),low_u(2,:))
@@ -144,7 +153,7 @@ plot(low_u(1,:),low_u(2,:))
 title('foot position trajectory')
 xlabel('x (m)') 
 ylabel('y (m)') 
-legend({'exist_COM','normal_COM','up_COM','low_COM'},'Location','southwest')
+legend({'exist_COM','up_COM','low_COM'},'Location','southwest')
 axis equal 
 
 
