@@ -29,6 +29,11 @@ a = -0.65;
 b = 0.65;
 random = a + (b-a)*rand(2,200);
 
+% Ax = 0.001;
+% T_periodx = 1;
+% Ay = 0.002;
+% T_periody = 0.6;
+
 if i >= 30
         ddxy_s = random(:,i-1);
         if abs(ddxy_s(1) - last_acc(1)) > 0.5
