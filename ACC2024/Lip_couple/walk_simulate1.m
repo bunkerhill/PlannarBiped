@@ -87,7 +87,7 @@ for i=2:length(T)
 %         ddxy_s = [0;0];
 %     end
 
-    if i == 83
+    if i == 82
         X_z_dot = MPC_controller2.MPC_horizon(x_tank(:,i-1),x_z,ddxy_s,current_T);
 
         x_z_up = x_z;
