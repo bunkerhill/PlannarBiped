@@ -6,7 +6,7 @@ ddxy_s_min = [-1.15;-1.15];      % minimum low bound of surface moving accelerat
 dT = 0.01;                            % simulation prediction time step
 T_s = 2;                               % simulation time
 from t=0.28s to end(t=2s)         % period of surface moving acceleration with random acc
-time_stop = 0.81s                % MPC horizon beginning moment
+time_stop = 0.8s                % MPC horizon beginning moment
 
 
 %% MPC
