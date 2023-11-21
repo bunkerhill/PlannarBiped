@@ -1,14 +1,4 @@
-%% Force-and-moment-based Model Predictive Control 
-
-% CITE AS: 
-% @inproceedings{li2021force,
-%  title={Force-and-moment-based model predictive control for achieving highly dynamic locomotion on bipedal robots},
-% author={Li, Junheng and Nguyen, Quan},
-% booktitle={2021 60th IEEE Conference on Decision and Control (CDC)},
-% pages={1024--1030},
-% year={2021},
-% organization={IEEE}
-%}
+%% Contingency Model Predictive Control 
 
 function u = Contingency_MPC(uin)
 tic
