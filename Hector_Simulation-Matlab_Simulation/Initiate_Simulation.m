@@ -41,7 +41,7 @@ t_start = 0; % simulation start time
 % MPC setup:
 gaitcycle = 0.4; % gait period
 h = 10; % horizon length
-dt_MPC = gaitcycle/10; % MPC sample time
+dt_MPC = gaitcycle/10; % MPC sample time  0.04s
 p_foot_pre = zeros(6,N+10); % foot matrix initialization 
 
 % Gait setup:

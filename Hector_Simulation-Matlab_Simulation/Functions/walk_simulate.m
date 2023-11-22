@@ -6,7 +6,7 @@ set(groot, 'defaulttextinterpreter','latex')
 set(groot, 'defaultaxesticklabelinterpreter','latex')
 set(groot, 'defaultlegendinterpreter','latex')
 
-L=0.26;
+L=0.525;
 g=9.8;
 ddxy_s_max = [1.15;1.15];
 ddxy_s_min = [-1.15;-1.15];
@@ -20,11 +20,6 @@ dT = 0.01;
 
 % simulation time
 T_s = 2;
-
-% set rand
-% a = -1.15;
-% b = 1.15;
-% random = a + (b-a)*rand(2,200);
 %% simulation
 
 x0 = [0;0;0;0];
@@ -33,19 +28,6 @@ x_tank = zeros(4,length(T));
 x_tank(:,1) = x0; 
 x_z = [0;0];
 u_tank = [0;0];
-
-% moving surface
-% Ax = 0.005;
-% T_periodx = 0.6;
-% Ay = 0.02;
-% T_periody = 0.6;
-% 
-% ddxy_s = [0;0];
-% ddxy_s_tank = [0;0];
-% dxy_s = [Ax*2*pi/T_periodx;Ay*2*pi/T_periody];
-% dxy_s_tank = [Ax*2*pi/T_periodx;Ay*2*pi/T_periody];
-% xy_s = [0;0];
-% xy_s_tank = [0;0];
 
 ddxy_s = [0;0];
 ddxy_s_tank = [0;0];
@@ -60,29 +42,6 @@ last_acc = [0,0];
 for i=2:length(T)
     fprintf("%d\n",i);
     current_T = T(i-1);
-    if i >= 30
-%         ddxy_s = [-Ax*2*pi/T_periodx*2*pi/T_periodx*sin((current_T-T(41))*2*pi/T_periodx);
-%                   -Ay*2*pi/T_periody*2*pi/T_periody*sin((current_T-T(41))*2*pi/T_periody)];
-% 
-%         dxy_s = dxy_s + ddxy_s * dT;
-%         xy_s = xy_s + dxy_s * dT;
-%     
-%         ddxy_s_tank = [ddxy_s_tank,ddxy_s];
-%         dxy_s_tank = [dxy_s_tank,dxy_s];
-%         xy_s_tank = [xy_s_tank,xy_s];
-
-        ddxy_s = random(:,i-1); % 0.56  0.58
-        if abs(ddxy_s(1) - last_acc(1)) > 0.5
-            ddxy_s(1) = last_acc(1) + sign((ddxy_s(1) - last_acc(1)))*0.5;
-        end
-
-        if abs(ddxy_s(2) - last_acc(2)) > 0.5
-            ddxy_s(2) = last_acc(2) + sign((ddxy_s(2) - last_acc(2)))*0.5;
-        end
-        last_acc = ddxy_s;
-    else
-        ddxy_s = [0;0];
-    end
 
     x_z_dot = MPC_controller2.MPC(x_tank(:,i-1),x_z,ddxy_s,current_T);
     x_z = x_z + dT * x_z_dot;

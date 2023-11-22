@@ -207,15 +207,15 @@ classdef intriMPC
                 current_T = (i-1)*obj.deta;
                 timer = 0.2;
                 if current_T < timer
-                    Y_min_next(i) = -0.5 * obj.step_width - 0.5 * obj.foot_width;
-                    Y_max_next(i) = 0.5 * obj.step_width + 0.5 * obj.foot_width;
+                    Y_min_next(i) = -0.5 * obj.step_width - 0.5 * obj.foot_length;
+                    Y_max_next(i) = 0.5 * obj.step_width + 0.5 * obj.foot_length;
                 else
                     current_T = current_T - timer;
                     one_gait_num = round(obj.gait_time/obj.deta);
                     count = round(current_T/obj.deta);
                     temp1 = floor(count/one_gait_num);
-                    Y_min_next(i) = (-1)^temp1 * 0.5 * obj.step_width - 0.5 * obj.foot_width;
-                    Y_max_next(i) = (-1)^temp1 * 0.5 * obj.step_width + 0.5 * obj.foot_width;
+                    Y_min_next(i) = (-1)^temp1 * 0.5 * obj.step_width - 0.5 * obj.foot_length;
+                    Y_max_next(i) = (-1)^temp1 * 0.5 * obj.step_width + 0.5 * obj.foot_length;
                 end
 
             end
@@ -266,8 +266,8 @@ classdef intriMPC
                 current_T = (i-1)*obj.deta;
                 timer = 0.2;
                 if current_T < timer
-                    Y_min_next(i) = -0.5 * obj.step_width - 0.5 * obj.foot_width;
-                    Y_max_next(i) = 0.5 * obj.step_width + 0.5 * obj.foot_width;
+                    Y_min_next(i) = -0.5 * obj.step_width - 0.5 * obj.foot_length;
+                    Y_max_next(i) = 0.5 * obj.step_width + 0.5 * obj.foot_length;
                 else
                     current_T = current_T - timer;
                     one_gait_num = round(obj.gait_time/obj.deta);
@@ -275,11 +275,11 @@ classdef intriMPC
                     temp1 = floor(count/one_gait_num);
                     temp2 = mod(count,one_gait_num);
                     if temp2 < round(obj.single_support_time/obj.deta)
-                        Y_min_next(i) = (-1)^temp1 * 0.5 * obj.step_width - 0.5 * obj.foot_width;
-                        Y_max_next(i) = (-1)^temp1 * 0.5 * obj.step_width + 0.5 * obj.foot_width;
+                        Y_min_next(i) = (-1)^temp1 * 0.5 * obj.step_width - 0.5 * obj.foot_length;
+                        Y_max_next(i) = (-1)^temp1 * 0.5 * obj.step_width + 0.5 * obj.foot_length;
                     else
-                        Y_min_next(i) = -0.5 * obj.step_width - 0.5 * obj.foot_width;
-                        Y_max_next(i) = 0.5 * obj.step_width + 0.5 * obj.foot_width;
+                        Y_min_next(i) = -0.5 * obj.step_width - 0.5 * obj.foot_length;
+                        Y_max_next(i) = 0.5 * obj.step_width + 0.5 * obj.foot_length;
                     end
                 end
 
