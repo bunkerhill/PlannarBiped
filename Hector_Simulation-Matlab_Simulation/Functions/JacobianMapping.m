@@ -16,5 +16,6 @@ Jc=Contact_Jacobian(q(1),q(2),q(3),q(4),q(5),q(6),q(7),q(8),q(9),q(10),RR(1),RR(
 % torque=contact_mapping*u
 contact_mapping=[blkdiag(Jc(1:3,:)',Jc(4:6,:)'),blkdiag(Jc(7:9,:)',Jc(10:12,:)')]; 
 out = contact_mapping*(-u); % joint torque
+% out = zeros(10,1);
 
 end

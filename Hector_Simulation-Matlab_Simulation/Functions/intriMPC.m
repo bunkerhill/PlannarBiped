@@ -30,6 +30,11 @@ classdef intriMPC
         
         % com height
         L
+
+        % timer
+        tim
+
+        distime
         
     end
 
@@ -41,16 +46,22 @@ classdef intriMPC
             obj.T_h = 1;
             obj.foot_length = 0.12;
             obj.foot_width = 0.02;
-            obj.step_size = 0.05;
+            obj.step_size = 0.15;
             obj.step_width = 0.15;
             obj.single_support_time = 0.15;
             obj.double_support_time = 0.05;
             obj.gait_time = obj.single_support_time + obj.double_support_time;
+            obj.tim = 0;
+            obj.distime = 0.2;
             
         end
-
+        
+        function obj = set_stepConstrains(obj,step_size,step_width)
+            obj.step_size = step_size;
+            obj.step_width = step_width;
+        end
         % solve the mpc problem
-        function pz_dot = MPC(obj,x,p_z,ddxy_s,current_T)
+        function pz_dot = MPC(obj,x,p_z,ddxy_s)
             
             vector_length = round(obj.T_h/obj.deta);
 
@@ -81,8 +92,8 @@ classdef intriMPC
             A1 = [P;
                   -P];
             A = blkdiag(A1,A1);
-            [X_min,X_max] = ZMP_rangex(obj,current_T);
-            [Y_min,Y_max] = ZMP_rangey(obj,current_T);
+            [X_min,X_max] = ZMP_rangex(obj,obj.tim);
+            [Y_min,Y_max] = ZMP_rangey(obj,obj.tim);
             b = [X_max-p*p_z(1);
                  -(X_min-p*p_z(1));
                  Y_max-p*p_z(2);
@@ -101,6 +112,10 @@ classdef intriMPC
 
         end
 
+        function obj = updatetime(obj)
+            obj.tim = obj.tim + 0.01;
+        end
+
         % Generate ZMP range
         function [X_min_next,X_max_next] = ZMP_rangex(obj,current_T)
 
@@ -115,7 +130,7 @@ classdef intriMPC
 
         function [x_min_next,x_max_next] = one_ZMP_rangex(obj,current_T)
             % start in double support
-            timer = 0.2;
+            timer = obj.distime;
             if current_T < timer
                 x_min_next = - 0.5 * obj.foot_length;
                 x_max_next = 0.5 * obj.foot_length;
@@ -149,7 +164,7 @@ classdef intriMPC
 
         function [y_min_next,y_max_next] = one_ZMP_rangey(obj,current_T)
              % start in double support
-            timer = 0.2;
+            timer = obj.distime;
             if current_T < timer
                 y_min_next = -0.5 * obj.step_width - 0.5 * obj.foot_width;
                 y_max_next = 0.5 * obj.step_width + 0.5 * obj.foot_width;

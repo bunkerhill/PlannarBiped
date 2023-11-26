@@ -43,7 +43,8 @@ for i=2:length(T)
     fprintf("%d\n",i);
     current_T = T(i-1);
 
-    x_z_dot = MPC_controller2.MPC(x_tank(:,i-1),x_z,ddxy_s,current_T);
+    x_z_dot = MPC_controller1.MPC(x_tank(:,i-1),x_z,ddxy_s);
+    MPC_controller1 = MPC_controller1.updatetime();
     x_z = x_z + dT * x_z_dot;
     u_tank = [u_tank, x_z];
     x_tank(:,i) = lip_dynamics(x_tank(:,i-1),x_z,ddxy_s,dT,L,g);
@@ -57,8 +58,8 @@ for i=2:length(T)
 end
 
 %% plot result
-[X_min_next,X_max_next] = MPC_controller2.get_ZMP_rangex(T_s+dT);
-[Y_min_next,Y_max_next] = MPC_controller2.get_ZMP_rangey(T_s+dT);
+[X_min_next,X_max_next] = MPC_controller1.get_ZMP_rangex(T_s+dT);
+[Y_min_next,Y_max_next] = MPC_controller1.get_ZMP_rangey(T_s+dT);
 
 % figure
 % plot(T,x_tank(2,:))
@@ -157,8 +158,8 @@ legend({'COM','ZMP','ZMP_lowConstraint','ZMP_upConstraint'})
 % axis equal 
 %%
 figure
-[X_min_next,X_max_next] = MPC_controller2.ZMP_rangex_plot(T_s);
-[Y_min_next,Y_max_next] = MPC_controller2.ZMP_rangey_plot(T_s);
+[X_min_next,X_max_next] = MPC_controller1.ZMP_rangex_plot(T_s);
+[Y_min_next,Y_max_next] = MPC_controller1.ZMP_rangey_plot(T_s);
 
 for i=1:length(X_min_next)
     rectangle('Position',[X_min_next(i),Y_min_next(i),X_max_next(i)-X_min_next(i),Y_max_next(i)-Y_min_next(i)])

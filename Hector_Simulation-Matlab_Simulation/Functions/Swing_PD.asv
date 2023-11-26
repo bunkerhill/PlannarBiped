@@ -125,11 +125,6 @@ fy_end_R = p_hip_R_w(2)+(delta_t+delta_t2)/2*(vy_act+wz_act*r*sin(eul(3)))/2+K_s
 fx_end_L = p_hip_L_w(1)+(delta_t+delta_t2)/2*(vx_act-wz_act*r*cos(eul(3)))/2+K_step*(vx_act-vx_des);
 fy_end_L = p_hip_L_w(2)+(delta_t+delta_t2)/2*(vy_act-wz_act*r*sin(eul(3)))/2+K_step*(vy_act-vy_des);
 
-% fx_end_R = p_hip_R_w(1)+0.3;
-% fy_end_R = p_hip_R_w(2)-0.5;
-% fx_end_L = p_hip_L_w(1)+0.3;
-% fy_end_L = p_hip_L_w(2)+0.5;
-
 fx_des_R=(t_halfcycle/delta_t)*(fx_end_R-stand_position(1,1))+stand_position(1,1);
 fy_des_R=(t_halfcycle/delta_t)*(fy_end_R-stand_position(2,1))+stand_position(2,1);
 fx_des_L=(t_halfcycle/delta_t)*(fx_end_L-stand_position(4,1))+stand_position(4,1);
@@ -138,12 +133,11 @@ fy_des_L=(t_halfcycle/delta_t)*(fy_end_L-stand_position(5,1))+stand_position(5,1
 if swing_schedule(1)==0
     fx_des_R=fpR(1,1);
     fy_des_R=fpR(2,1);
-    % MPC_controller = MPC_controller.set_stepConstrains(fx_end_R-x_act(1),fy_end_R-x_act(2));
+    MPC_controller = MPC_controller.set_stepConstrains(fx_end_R,fy_end_R);
 end
 if swing_schedule(2)==0
     fx_des_L=fpL(1,1);
     fy_des_L=fpL(2,1);
-    % MPC_controller = MPC_controller.set_stepConstrains(fx_end_L-x_act(1),fy_end_L-x_act(2));
 end
 
 fpL_des = [fx_des_L;fy_des_L;fzdes];%-x_act;

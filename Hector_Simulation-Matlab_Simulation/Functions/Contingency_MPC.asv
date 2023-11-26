@@ -3,7 +3,7 @@
 function u = Contingency_MPC(uin)
 tic
 %% MPC Parameters
-global i_MPC_var dt_MPC_vec gait x_traj_IC Contact_Jacobian Rotm_foot addArm MPC_controller x_z xy_com xy_com_act footprint xy_com_tank
+global i_MPC_var dt_MPC_vec gait x_traj_IC Contact_Jacobian Rotm_foot addArm MPC_controller x_z xy_com xy_com_act footprint
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -47,18 +47,17 @@ end
 dT = 0.04;
 L = 0.525;
 ddxy_s = [0;0];
-% x_z_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],x_z,ddxy_s);
-% MPC_controller = MPC_controller.updatetime();
-% 
-% x_z = x_z + dT * x_z_dot;
-% xy_com = lip_dynamics([x(4);x(10);x(5);x(11)],x_z,ddxy_s,dT,L,g);
-% [x(10);x(11)]
-% xy_com_act = [[x(4);x(10);x(5);x(11)] xy_com_act];% px vx py vy
-% footprint = [[MPC_controller.step_size;MPC_controller.step_width] footprint];
+x_z_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],x_z,ddxy_s);
+MPC_controller = MPC_controller.updatetime();
 
-% xdes(4+6) = xy_com(2); %vx
-% xdes(5+6) = xy_com(4); %vy
-% xy_com_tank = [xy_com xy_com_tank];
+x_z = x_z + dT * x_z_dot;
+xy_com = lip_dynamics([x(4);x(10);x(5);x(11)],x_z,ddxy_s,dT,L,g);
+% [x(10);x(11)]
+xy_com_act = [[x(4);x(10);x(5);x(11)] xy_com_act];% px vx py vy
+footprint = [[MPC_controller.step_size;MPC_controller.step_width] footprint];
+
+xdes(4+6) = xy_com(2); %vx
+xdes(5+6) = xy_com(4); %vy
 x_traj = Calc_x_traj(xdes,x,h,k) % desired trajectory
 foot_traj =[foot(1:3);foot(7:9)]; % assume foot under hip
 % alternatively, can use function Calc_foot_traj_3Dwalking for more
