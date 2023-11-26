@@ -33,7 +33,7 @@ MPC_controller = intriMPC(g,L,ddxy_s_max,ddxy_s_min);
 dT = 0.005;
 %% simulation
 
-x0 = [0;0;0;0];
+x0 = [0.01;0;0;0];
 T=0:dT:3;
 x_tank = zeros(4,length(T));
 x_tank(:,1) = x0; 
@@ -49,11 +49,13 @@ xy_s_tank = [0;0];
 for i=2:length(T)
     i
     current_T = T(i-1);
-    if i > 100 && i <120
-        ddxy_s = [-0.01;0];
-    else
-        ddxy_s = [0;0];
-    end
+    % if i > 100 && i <120
+    %     ddxy_s = [1e-4; 0];
+    % else
+    %     ddxy_s = [0;0];
+    % end
+    ddxy_s = [1e-3; 0];
+
     x_z_dot = MPC_controller.MPC(x_tank(:,i-1),x_z,ddxy_s,current_T);
     x_z = x_z + dT * x_z_dot;
     u_tank = [u_tank, x_z];
@@ -97,12 +99,14 @@ for i=1:round(length(X_min_next)/2)
 end
 
 i = length(X_min_next);
+
 plot(u_tank(1,1:i),u_tank(2,1:i))
 
 plot(x_tank(1,1:i),x_tank(3,1:i))
 
-% plot(X_min_next,Y_min_next)
-% plot(X_max_next,Y_max_next)
+figure
+plot(X_min_next,Y_min_next)
+plot(X_max_next,Y_max_next)
 
 
 title('COM trajectory and foot position trajectory')

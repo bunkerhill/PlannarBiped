@@ -26,7 +26,7 @@ solver = nlpsol('solver', 'ipopt', nlp_prob,opts)
 
 args = struct;
 args.lbx = -inf;  % unconstrained optimization 
-args.ubx = inf;   % unconstrained optimization
+args.ubx = -2;   % unconstrained optimization
 args.lbg = -inf;  % unconstrained optimization
 args.ubg = inf;   % unconstrained optimization
 
