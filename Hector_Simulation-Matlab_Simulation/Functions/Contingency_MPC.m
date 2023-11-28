@@ -53,7 +53,7 @@ ddxy_s = [0;0];
 % x_z = x_z + dT * x_z_dot;
 % xy_com = lip_dynamics([x(4);x(10);x(5);x(11)],x_z,ddxy_s,dT,L,g);
 % [x(10);x(11)]
-xy_com_act = [[x(4);x(10);x(5);x(11)] xy_com_act];% px vx py vy
+xy_com_act = [xy_com_act [x(4);x(10);x(5);x(11)]];% px vx py vy
 % footprint = [[MPC_controller.step_size;MPC_controller.step_width] footprint];
 
 % xdes(4+6) = xy_com(2); %vx
