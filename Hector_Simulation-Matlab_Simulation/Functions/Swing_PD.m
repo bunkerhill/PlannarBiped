@@ -135,15 +135,15 @@ fy_des_R=(t_halfcycle/delta_t)*(fy_end_R-stand_position(2,1))+stand_position(2,1
 fx_des_L=(t_halfcycle/delta_t)*(fx_end_L-stand_position(4,1))+stand_position(4,1);
 fy_des_L=(t_halfcycle/delta_t)*(fy_end_L-stand_position(5,1))+stand_position(5,1);
 
-if swing_schedule(1)==0
+if swing_schedule(1)==0 % left leg swings
     fx_des_R=fpR(1,1);
     fy_des_R=fpR(2,1);
-    % MPC_controller = MPC_controller.set_stepConstrains(fx_end_R-x_act(1),fy_end_R-x_act(2));
+    MPC_controller = MPC_controller.set_stepConstrains(abs(fx_end_L-x_act(1)),abs(fy_end_L-x_act(2)));
 end
 if swing_schedule(2)==0
     fx_des_L=fpL(1,1);
     fy_des_L=fpL(2,1);
-    % MPC_controller = MPC_controller.set_stepConstrains(fx_end_L-x_act(1),fy_end_L-x_act(2));
+    MPC_controller = MPC_controller.set_stepConstrains(abs(fx_end_R-x_act(1)),abs(fy_end_R-x_act(2)));
 end
 
 fpL_des = [fx_des_L;fy_des_L;fzdes];%-x_act;

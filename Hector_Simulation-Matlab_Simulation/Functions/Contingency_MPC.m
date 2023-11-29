@@ -44,7 +44,7 @@ x = [x;g];
 if k == 1
     x_traj = x_traj_IC
 end
-dT = 0.04;
+dT = 0.008;
 L = 0.525;
 ddxy_s = [0;0];
 % x_z_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],x_z,ddxy_s);
@@ -52,14 +52,16 @@ ddxy_s = [0;0];
 % 
 % x_z = x_z + dT * x_z_dot;
 % xy_com = lip_dynamics([x(4);x(10);x(5);x(11)],x_z,ddxy_s,dT,L,g);
-% [x(10);x(11)]
-xy_com_act = [xy_com_act [x(4);x(10);x(5);x(11)]];% px vx py vy
-% footprint = [[MPC_controller.step_size;MPC_controller.step_width] footprint];
+% % [x(10);x(11)]
+% xy_com_act = [xy_com_act [x(4);x(10);x(5);x(11)]];% px vx py vy
+footprint = [footprint [MPC_controller.step_size;MPC_controller.step_width]];
 
 % xdes(4+6) = xy_com(2); %vx
 % xdes(5+6) = xy_com(4); %vy
-% xy_com_tank = [xy_com xy_com_tank];
-x_traj = Calc_x_traj(xdes,x,h,k) % desired trajectory
+xdes(4+6) = sin(dT*100); %vx
+xdes(5+6) = xy_com(4); %vy
+xy_com_tank = [xy_com_tank xy_com];
+x_traj = Calc_x_traj(xdes,x,h,k); % desired trajectory
 foot_traj =[foot(1:3);foot(7:9)]; % assume foot under hip
 % alternatively, can use function Calc_foot_traj_3Dwalking for more
 % accurate foot position esitmate, may present some bugs for 3D locomotion
