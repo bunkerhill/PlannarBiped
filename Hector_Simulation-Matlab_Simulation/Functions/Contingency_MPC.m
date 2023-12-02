@@ -58,9 +58,10 @@ footprint = [footprint [MPC_controller.step_size;MPC_controller.step_width]];
 
 % xdes(4+6) = xy_com(2); %vx
 % xdes(5+6) = xy_com(4); %vy
-xdes(4+6) = sin(dT*100); %vx
-xdes(5+6) = xy_com(4); %vy
-xy_com_tank = [xy_com_tank xy_com];
+% xdes(4+6) = sin(dT*100); %vx
+% xdes(5+6) = 0; %vy
+xy_com_tank = [xy_com_tank [0;xdes(4+6);0;xdes(5+6)]];% px vx py vy
+xy_com_act = [xy_com_act [x(4);x(10);x(5);x(11)]];% px vx py vy
 x_traj = Calc_x_traj(xdes,x,h,k); % desired trajectory
 foot_traj =[foot(1:3);foot(7:9)]; % assume foot under hip
 % alternatively, can use function Calc_foot_traj_3Dwalking for more

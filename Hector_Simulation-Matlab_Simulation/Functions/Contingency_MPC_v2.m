@@ -1,0 +1,303 @@
+%% Contingency Model Predictive Control 
+
+function u = Contingency_MPC_v2(uin)
+tic
+%% MPC Parameters
+global i_MPC_var dt_MPC_vec gait x_traj_IC Contact_Jacobian Rotm_foot addArm MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait
+k = i_MPC_var; % current horizon
+h = 10; % prediction horizons
+g = 9.81; % gravity
+
+%% QPOASES Parameters
+import casadi.*
+numVar = 12;
+numCons = 34;
+%% Making definition consistent with MPC
+% input definition
+xdes=uin(1:12); % desired states [eul, p, omega, v]'
+x=uin(13:24); % current states [eul, p, omega, v]'
+q=uin(25:34); % joint angles [q_L, q_R]'
+foot=uin(35:46); % contact position and velocity [p_L, v_L, p_R, v_R]'
+
+eul = x(1:3);
+eul_des = xdes(1:3);
+R = eul2rotm(flip(eul'));
+
+% enforce "2*pi=0" relation for turning
+yaw_correction=0;
+while yaw_correction==0
+    if eul_des(3,1)-eul(3,1)>pi
+        eul(3,1)=eul(3,1)+2*pi;
+    elseif eul_des(3,1)-eul(3,1)<-pi
+        eul(3,1)=eul(3,1)-2*pi;
+    else
+        yaw_correction=1;
+    end
+end
+
+% rearrange MPC states
+xdes = [xdes;g];
+x = [x;g];
+
+%% Assigning desired trajectory for CoM and Foot locations
+if k == 1
+    x_traj = x_traj_IC
+end
+dT = 0.008;
+L = 0.525;
+ddxy_s = [0;0];
+x_z_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],x_z,ddxy_s);
+MPC_controller = MPC_controller.updatetime(dT);
+x_z = x_z + dT * x_z_dot;
+ddxy_com = lip_dynamics([x(4);x(5)],x_z,ddxy_s,dT,L,g);
+% % [x(10);x(11)]
+% xy_com_act = [xy_com_act [x(4);x(10);x(5);x(11)]];% px vx py vy
+footprint = [footprint [MPC_controller.step_size;MPC_controller.step_width]];
+
+% xdes(4+6) = xy_com(2); %vx
+% xdes(5+6) = xy_com(4); %vy
+% xdes(4+6) = sin(dT*100); %vx
+% xdes(5+6) = 0; %vy
+xy_com_tank = [xy_com_tank [0;xdes(4+6);0;xdes(5+6)]];% px vx py vy
+xy_com_act = [xy_com_act [x(4);x(10);x(5);x(11)]];% px vx py vy
+
+
+%% Robot simplified dynamics physical properties 
+mu = 0.5; %friction coefficient
+if addArm
+    m = 16.4; % included arms for humanoid 
+    Ib = diag([0.932, 0.9420, 0.0711]); % SRBD MoI (included body, arms, hips, and thighs)
+else
+    m = 5.75 + 2*(0.835+0.764+1.613+0.12+0.08); % mass (inclulded body, hips, and thighs)
+    Ib = diag([0.5413, 0.5200, 0.0691]); % SRBD MoI (included body, hips, and thighs)
+end
+Fmax = 500; Fmin = 0; % force limits
+
+%% Forward Kinematics (for joint torque constraints)
+RR=reshape(R,[9,1]);
+Jc=Contact_Jacobian(q(1),q(2),q(3),q(4),q(5),q(6),q(7),q(8),q(9),q(10),RR(1),RR(2),RR(3),RR(4),RR(5),RR(6),RR(7),RR(8),RR(9));
+contact_mapping=[blkdiag(Jc(1:3,:)',Jc(4:6,:)'),blkdiag(Jc(7:9,:)',Jc(10:12,:)')]; % torque=contact_mapping*u
+
+%% State-space A & B matrices  (dynamics are done in world frame)
+% foot rotation wrt. world frame
+R_foot=Rotm_foot(q(1),q(2),q(3),q(4),q(5),q(6),q(7),q(8),q(9),q(10),RR(1),RR(2),RR(3),RR(4),RR(5),RR(6),RR(7),RR(8),RR(9));
+R_foot_R=R_foot(1:3,:);
+R_foot_L=R_foot(4:6,:);
+
+I = R*Ib*R'; % MoI in world frame
+
+% continuous A & b:
+A=[eye(3), eye(3), zeros(3),zeros(3);
+    skew(-x_traj(4:6,1) + foot_traj(1:3,1)), skew(-x_traj(4:6,1) + foot_traj(4:6,1)), eye(3), eye(3)];
+b = [m*(p_cddot+[0;0;-g]);
+    I*w_cddot];
+
+%% MPC Weights: (tune these according to your task)
+% state tracking objective:
+L = eye(12);
+% control input minimization:
+% QP math:
+Hd = 2*(A'*L*A);
+fd = -2*A'*L*b;  
+
+%% QP Constraints:
+% please refer to the quadprog constraint format: lbA <= A*u <= ubA
+bigNum = 1e6;
+smallNum = -bigNum;
+Ac = DM(numCons,numVar); 
+%friction constraint:
+A_mu = [1,0,-mu,zeros(1,9);
+    0,1,-mu,zeros(1,9); 
+    1,0,mu,zeros(1,9); 
+    0,1,mu,zeros(1,9);
+    zeros(1,3),1,0,-mu,zeros(1,6);
+    zeros(1,3),0,1,-mu,zeros(1,6); 
+    zeros(1,3),1,0,mu,zeros(1,6); 
+    zeros(1,3),0,1,mu,zeros(1,6)];
+
+lba_mu = [smallNum;smallNum;0;0; smallNum;smallNum;0;0];
+uba_mu = [0;0;bigNum;bigNum; 0;0;bigNum;bigNum];
+
+%force limit constraint:
+A_f = [0,0,1,zeros(1,9); zeros(1,3),0,0,1,zeros(1,6)];
+lba_force = [Fmin; Fmin]; 
+uba_force = [Fmax; Fmax];
+
+% Line foot constraints :
+% ref: Ding, Yanran, et al. "Orientation-Aware Model Predictive Control 
+% with Footstep Adaptation for Dynamic Humanoid Walking." 2022 IEEE-RAS 
+% 21st International Conference on Humanoid Robots (Humanoids). IEEE, 2022.
+
+lt = 0.09-0.01; lh = 0.06-0.02;% line foot lengths
+A_LF1=[-lh*[0,0,1]*R_foot_R',zeros(1,3),[0,1,0]*R_foot_R',zeros(1,3);
+    -lt*[0,0,1]*R_foot_R',zeros(1,3),-[0,1,0]*R_foot_R',zeros(1,3);
+    zeros(1,3),-lh*[0,0,1]*R_foot_L',zeros(1,3),[0,1,0]*R_foot_L';
+    zeros(1,3),-lt*[0,0,1]*R_foot_L',zeros(1,3),-[0,1,0]*R_foot_L'];
+A_LF2 = 1*[ [0, lt, -mu*lt]*R_foot_R', zeros(1,3), [0, -mu, -1]*R_foot_R', zeros(1,3);
+    zeros(1,3), [0, lt, -mu*lt]*R_foot_L', zeros(1,3), [0, -mu, -1]*R_foot_L';
+    [0, -lt, -mu*lt]*R_foot_R', zeros(1,3), [0, -mu, -1]*R_foot_R', zeros(1,3);
+    zeros(1,3), [0, -lt, -mu*lt]*R_foot_L', zeros(1,3), [0, -mu, -1]*R_foot_L';
+    [0, lh, -mu*lh]*R_foot_R', zeros(1,3), [0, mu, 1]*R_foot_R', zeros(1,3);
+    zeros(1,3), [0, lh, -mu*lh]*R_foot_L', zeros(1,3), [0, mu, 1]*R_foot_L';
+    [0, -lh, -mu*lh]*R_foot_R', zeros(1,3), [0, mu, -1]*R_foot_R', zeros(1,3);
+    zeros(1,3), [0, -lh, -mu*lh]*R_foot_L', zeros(1,3), [0, mu, -1]*R_foot_L'];
+uba_LF = zeros(12,1); 
+lba_LF = ones(12,1)*smallNum;
+A_LF = [A_LF1;A_LF2]; 
+
+% motor torque limit
+A_tau = contact_mapping;
+% gait are implemented here to zero out the swing leg control inputs
+if gait == 1
+    gaitm = gaitSchedule(i_gait, 1);
+elseif gait == 0
+    gaitm = ones(10,1);
+end
+uba_tau = [33.5;33.5;50;50;33.5;33.5;33.5;50;50;33.5].*gaitm;
+lba_tau = -uba_tau.*gaitm;
+
+% foot moment Mx=0: 
+Moment_selection=[1,0,0];
+A_M = [zeros(1,3),zeros(1,3),Moment_selection*R_foot_R',zeros(1,3);
+    zeros(1,3),zeros(1,3),zeros(1,3),Moment_selection*R_foot_L'];
+
+uba_M = zeros(2,1);
+lba_M = uba_M;
+
+% Constraint Aggregation:
+Ac(1:8,:) = A_mu; % row 1-80
+Ac(9:10,:) = A_f; % row 81-100
+Ac(11:22,:) = A_LF; % row 101-220
+Ac(23:32,:) = A_tau; % row 221-320
+Ac(33:34,:) = A_M; % row 321-340
+
+lba = [lba_mu; lba_force; lba_LF; lba_tau; lba_M];
+uba = [uba_mu; uba_force; uba_LF; uba_tau; uba_M];
+
+%% QPOASES setup:
+Hsize = size(Hd);
+fsize = size(fd);
+H = DM(Hsize);
+H = DM(Hd);
+g = DM(fsize);
+g = DM(fd);
+
+qp = struct;
+qp.h = H.sparsity();
+qp.a = Ac.sparsity();
+% qp.setOptions( setToReliable() );
+% print_options()
+opts = struct('enableEqualities', 1, 'printLevel', 'low',...
+    'enableFullLITests',0);
+S = conic('S','qpoases',qp,opts);
+% disp(S)
+r = S('h', H, 'g', g, 'a', Ac, 'lba',lba, 'uba', uba);
+
+% solve!:
+tic
+x_opt = r.x;
+% disp(x_opt(1:12));
+disp(' ');
+disp(['MPC Time Step:',num2str(k)]);
+disp('QPOASES-MPC Solve Time:');
+toc
+
+GRFM = full(x_opt);
+GRFM = GRFM(1:12);
+% u=-contact_mapping*GRFM(1:12); 
+u=[GRFM(1:12)];
+disp('QPOASES-MPC Function Total Time:');
+toc
+end
+
+
+%% functions %%
+
+function foot_traj = Calc_foot_traj_3Dwalking(xdes,x_traj,foot,h,k,R)
+global dt_MPC_vec 
+i_MPC_gait = rem(k,h);
+
+foot_traj = zeros(6,h);
+%foot prediction: walking gait
+if 1 <= i_MPC_gait && i_MPC_gait <= 5 % stance sequence: R-L-R
+    current_R = foot(1:3); % current right foot - anchor foot
+    next_L = current_R + xdes(10)*dt_MPC_vec(k)*h/2;
+    next_R = next_L + xdes(10)*dt_MPC_vec(k+5)*h/2;
+    %phase 1: right foot anchoring (6-i_MPC_gait)
+    for i = 1:6-i_MPC_gait
+        foot_traj(4:6,i) = R*current_R;
+    end
+    %phase 2: next left foot anchoring (5)
+    for i = 7-i_MPC_gait:11-i_MPC_gait
+        foot_traj(1:3,i) = R*next_L;
+    end
+    %phase 3: next right foot anchoring (i_MPC-gait-1)
+    if i_MPC_gait>1
+        for i = 12-i_MPC_gait:h
+            foot_traj(4:6,i) = R*next_R;
+        end
+    end
+else % stance sequence: L-R-L
+    if i_MPC_gait == 0; i_MPC_gait = 10; end
+    i_MPC_gait = i_MPC_gait - h/2;
+    current_L = foot(1:3); % current left foot - anchor foot
+    next_R = current_L + n*xdes(10)*dt_MPC_vec(k)*h/2;
+    next_L = next_R + n*xdes(10)*dt_MPC_vec(k+5)*h/2;
+    %phase 1: left foot anchoring (6-i_MPC_gait)
+    for i = 1:6-i_MPC_gait
+        foot_traj(1:3,i) = R*current_L;
+    end
+    %phase 2: next right foot anchoring (5)
+    for i = 7-i_MPC_gait:11-i_MPC_gait
+        foot_traj(4:6,i) = R*next_R;
+    end
+    %phase 3: next left foot anchoring (i_MPC-gait-1)
+    if i_MPC_gait>1
+        for i = 12-i_MPC_gait:h
+            foot_traj(1:3,i) = R*next_L;
+        end
+    end
+end
+
+end
+
+
+function x_traj = Calc_x_traj(xdes,x,h,k)
+global dt_MPC_vec 
+ for i = 0:h-1
+     for j = 1:6
+         if xdes(6+j) == 0
+             x_traj(j,i+1) = xdes(j) + xdes(6+j)*sum(dt_MPC_vec(k:k+i));
+         else
+
+             x_traj(j,i+1) = x(j) + xdes(6+j)*sum(dt_MPC_vec(k:k+i));
+         end
+         x_traj(6+j,i+1) = xdes(6+j);
+     end
+         x_traj(13,i+1) = xdes(13);
+ end
+end
+
+function gaitm = gaitSchedule(i, gait)
+
+% walking 
+Rm = [0;0;0;0;0; 1;1;1;1;1];
+Lm = [1;1;1;1;1; 0;0;0;0;0];
+
+if(i==0)
+    gaitm = Rm;
+else
+    gaitm = Lm;
+end
+
+end
+
+function A= skew(v)
+ A=[0 -v(3) v(2) ; v(3) 0 -v(1) ; -v(2) v(1) 0 ]; 
+end
+
+function ddXY = lip_dynamics(X,u,ddxy_s,L,g)
+
+ddXY = g/L*(X-u)-ddxy_s;
+
+end

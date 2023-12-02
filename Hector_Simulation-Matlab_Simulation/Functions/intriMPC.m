@@ -46,13 +46,13 @@ classdef intriMPC
             obj.T_h = 1;
             obj.foot_length = 0.12;
             obj.foot_width = 0.02;
-            obj.step_size = 0.15;
+            obj.step_size = -0.15;
             obj.step_width = 0.15;
             obj.single_support_time = 0.15;
             obj.double_support_time = 0.05;
             obj.gait_time = obj.single_support_time + obj.double_support_time;
             obj.tim = 0;
-            obj.distime = 0;
+            obj.distime = 0.2;
             
         end
         
@@ -113,7 +113,7 @@ classdef intriMPC
         end
 
         function obj = updatetime(obj)
-            obj.tim = obj.tim + 0.008;
+            obj.tim = obj.tim + 0.01;
         end
 
         % Generate ZMP range

@@ -13,7 +13,7 @@ global Contact_Jacobian Rotm_foot MPC_controller x_z xy_com xy_com_act footprint
 
 L=0.525;
 g=9.81;
-MPC_controller = intriMPC(g,L);
+MPC_controller = ACC_MPC(g,L);
 x_z = [0;0];
 xy_com = [0;0;0;0];
 xy_com_tank = [0;0;0;0];
