@@ -138,12 +138,12 @@ fy_des_L=(t_halfcycle/delta_t)*(fy_end_L-stand_position(5,1))+stand_position(5,1
 if swing_schedule(1)==0 % left leg swings
     fx_des_R=fpR(1,1);
     fy_des_R=fpR(2,1);
-    MPC_controller = MPC_controller.set_stepConstrains(abs(fx_end_L-x_act(1)),abs(fy_end_L-x_act(2)));
+    % MPC_controller = MPC_controller.set_stepConstrains(abs(fx_end_L-x_act(1)),abs(fy_end_L-x_act(2)));
 end
 if swing_schedule(2)==0
     fx_des_L=fpL(1,1);
     fy_des_L=fpL(2,1);
-    MPC_controller = MPC_controller.set_stepConstrains(abs(fx_end_R-x_act(1)),abs(fy_end_R-x_act(2)));
+    % MPC_controller = MPC_controller.set_stepConstrains(abs(fx_end_R-x_act(1)),abs(fy_end_R-x_act(2)));
 end
 
 fpL_des = [fx_des_L;fy_des_L;fzdes];%-x_act;
@@ -172,6 +172,13 @@ Kp = diag([100 100 100 100 5]); Kd = diag([2 2 2 2 0.1]);
 
 tau1 = (Kp*(qR_des - q(1:5)) + Kd*(0 - qd(1:5))).*swing_schedule(1);
 tau2 = (Kp*(qL_des - q(6:10)) + Kd*(0 - qd(6:10))).*swing_schedule(2);
+
+% if swing_schedule(1)==0 % left leg swings
+%     tau1(2) = -100*(0-RPY(1))-20*(0-w_act(1));
+% end
+% if swing_schedule(2)==0
+%     tau2(2) = -100*(0-RPY(1))-20*(0-w_act(1));
+% end
 
 tau = [tau1;tau2];
 

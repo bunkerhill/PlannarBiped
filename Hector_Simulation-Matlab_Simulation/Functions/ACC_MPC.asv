@@ -104,7 +104,7 @@ classdef ACC_MPC
             [Pz_dot,~,exitflag,~] = quadprog(H,[],A,b,Aeq,beq,lb,ub,[],options);
             
             if exitflag == -2
-               fprintf("-------------------SOLUTION NOT FOUND--------------------");
+               fprintf("---SOLUTION NOT FOUND---");
             end
 
             pz_dot = [Pz_dot(1);

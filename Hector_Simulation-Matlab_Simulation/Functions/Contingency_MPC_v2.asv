@@ -3,7 +3,7 @@
 function u = Contingency_MPC_v2(uin)
 tic
 %% MPC Parameters
-global i_MPC_var dt_MPC_vec gait x_traj_IC Contact_Jacobian Rotm_foot addArm MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait
+global i_MPC_var dt_MPC_vec gait x_traj_IC Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait desire_traj
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -35,32 +35,51 @@ while yaw_correction==0
     end
 end
 
-% rearrange MPC states
-xdes = [xdes;g];
-x = [x;g];
-
 %% Assigning desired trajectory for CoM and Foot locations
-if k == 1
-    x_traj = x_traj_IC
-end
+
+RPY=x(1:3); % Roll Pitch Yaw
+x_act=x(4:6); % CoM position
+w_act=x(7:9); % Angular velocity
+v_act=x(10:12); % CoM velocity
 dT = 0.008;
+
+% contingency part
 L = 0.525;
 ddxy_s = [0;0];
 x_z_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],x_z,ddxy_s);
 MPC_controller = MPC_controller.updatetime(dT);
 x_z = x_z + dT * x_z_dot;
-ddxy_com = lip_dynamics([x(4);x(10);x(5);x(11)],x_z,ddxy_s,dT,L,g);
-% % [x(10);x(11)]
-% xy_com_act = [xy_com_act [x(4);x(10);x(5);x(11)]];% px vx py vy
-footprint = [footprint [MPC_controller.step_size;MPC_controller.step_width]];
-
-% xdes(4+6) = xy_com(2); %vx
-% xdes(5+6) = xy_com(4); %vy
-% xdes(4+6) = sin(dT*100); %vx
-% xdes(5+6) = 0; %vy
-xy_com_tank = [xy_com_tank [0;xdes(4+6);0;xdes(5+6)]];% px vx py vy
-xy_com_act = [xy_com_act [x(4);x(10);x(5);x(11)]];% px vx py vy
-
+ddxy_com = lip_dynamics([x(4);x(5)],x_z,ddxy_s,L,g);
+ddxyz_com = [ddxy_com;0];
+dxyz_com = v_act + ddxyz_com * dT;
+dxyz_com(3) = 0;
+xyz_com = x_act + dxyz_com * dT;
+xyz_com(3) = L;
+ddw_com = [0;0;0];
+dw_com = [0;0;0];
+w_com = [0;0;0];
+kp_p = 600;
+kd_p = 200;
+kp_w = 500;
+kd_w = 200;
+p_cddot = kp_p*(xyz_com-x_act) + kd_p*(dxyz_com-v_act) + ddxyz_com;
+w_cddot = kp_w*(w_com-RPY) + kd_w*(dw_com-w_act) + ddw_com;
+foot_traj =[foot(1:3);foot(7:9)]; % assume foot under hip
+desire_traj = [desire_traj x_traj];
+% WBC control
+% kp_p = 250;
+% kd_p = 60;
+% kp_w = 250;
+% kd_w = 60;
+% x_traj = Calc_x_traj(xdes,x,dT)'; % desired trajectory
+% w_com = x_traj(1:3);
+% xyz_com = x_traj(4:6);
+% dw_com = x_traj(7:9);
+% dxyz_com = x_traj(10:12);
+% p_cddot = kp_p*(xyz_com-x_act) + kd_p*(dxyz_com-v_act);
+% w_cddot = kp_w*(w_com-RPY) + kd_w*(dw_com-w_act);
+% foot_traj =[foot(1:3);foot(7:9)]; % assume foot under hip
+% desire_traj = [desire_traj x_traj];
 
 %% Robot simplified dynamics physical properties 
 mu = 0.5; %friction coefficient
@@ -88,23 +107,32 @@ I = R*Ib*R'; % MoI in world frame
 
 % continuous A & b:
 A=[eye(3), eye(3), zeros(3),zeros(3);
-    skew(-x_traj(4:6,1) + foot_traj(1:3,1)), skew(-x_traj(4:6,1) + foot_traj(4:6,1)), eye(3), eye(3)];
+    skew(-x(4:6,1) + foot_traj(1:3,1)), skew(-x(4:6,1) + foot_traj(4:6,1)), eye(3), eye(3)];
 b = [m*(p_cddot+[0;0;-g]);
     I*w_cddot];
 
 %% MPC Weights: (tune these according to your task)
 % state tracking objective:
-L = eye(12);
+L = [100 0 0 0 0 0;
+     0 100 0 0 0 0;
+     0 0 130 0 0 0;
+     0 0 0 1000 0 0;
+     0 0 0 0 600 0;
+     0 0 0 0 0 600];
+W = 50*eye(12);
+M = 50*eye(12);
+% L = eye(6);
 % control input minimization:
 % QP math:
-Hd = 2*(A'*L*A);
-fd = -2*A'*L*b;  
+Hd = 2*(A'*L*A+W+M);
+fd = -2*(A'*L*b + M*last_u);  
 
 %% QP Constraints:
 % please refer to the quadprog constraint format: lbA <= A*u <= ubA
 bigNum = 1e6;
 smallNum = -bigNum;
 Ac = DM(numCons,numVar); 
+% Ac = zeros(numCons,numVar);
 %friction constraint:
 A_mu = [1,0,-mu,zeros(1,9);
     0,1,-mu,zeros(1,9); 
@@ -144,7 +172,6 @@ A_LF2 = 1*[ [0, lt, -mu*lt]*R_foot_R', zeros(1,3), [0, -mu, -1]*R_foot_R', zeros
 uba_LF = zeros(12,1); 
 lba_LF = ones(12,1)*smallNum;
 A_LF = [A_LF1;A_LF2]; 
-
 % motor torque limit
 A_tau = contact_mapping;
 % gait are implemented here to zero out the swing leg control inputs
@@ -173,6 +200,16 @@ Ac(33:34,:) = A_M; % row 321-340
 
 lba = [lba_mu; lba_force; lba_LF; lba_tau; lba_M];
 uba = [uba_mu; uba_force; uba_LF; uba_tau; uba_M];
+
+%% quadprog
+% A = [Ac;-Ac];
+% b = [uba;-lba];
+% 
+% options = optimset('Algorithm','interior-point-convex','Display','off');
+% [u,~,exitflag,~] = quadprog(Hd,fd,A,b,[],[],[],[],[],options);
+% if exitflag == -2
+%    fprintf("---SOLUTION NOT FOUND---");
+% end
 
 %% QPOASES setup:
 Hsize = size(Hd);
@@ -206,8 +243,12 @@ GRFM = full(x_opt);
 GRFM = GRFM(1:12);
 % u=-contact_mapping*GRFM(1:12); 
 u=[GRFM(1:12)];
+
 disp('QPOASES-MPC Function Total Time:');
 toc
+last_u = u;
+
+
 end
 
 
@@ -262,20 +303,17 @@ end
 end
 
 
-function x_traj = Calc_x_traj(xdes,x,h,k)
-global dt_MPC_vec 
- for i = 0:h-1
-     for j = 1:6
-         if xdes(6+j) == 0
-             x_traj(j,i+1) = xdes(j) + xdes(6+j)*sum(dt_MPC_vec(k:k+i));
-         else
+function x_traj = Calc_x_traj(xdes,x,dt)
 
-             x_traj(j,i+1) = x(j) + xdes(6+j)*sum(dt_MPC_vec(k:k+i));
-         end
-         x_traj(6+j,i+1) = xdes(6+j);
+for j = 1:6
+     if xdes(6+j) == 0
+         x_traj(j) = xdes(j) + xdes(6+j)*dt;
+     else
+         x_traj(j) = x(j) + xdes(6+j)*dt;
      end
-         x_traj(13,i+1) = xdes(13);
- end
+     x_traj(6+j) = xdes(6+j);
+end
+
 end
 
 function gaitm = gaitSchedule(i, gait)
@@ -284,10 +322,10 @@ function gaitm = gaitSchedule(i, gait)
 Rm = [0;0;0;0;0; 1;1;1;1;1];
 Lm = [1;1;1;1;1; 0;0;0;0;0];
 
-if(i==0)
-    gaitm = Rm;
-else
+if(i==0) % R stance
     gaitm = Lm;
+else
+    gaitm = Rm;
 end
 
 end
@@ -296,25 +334,8 @@ function A= skew(v)
  A=[0 -v(3) v(2) ; v(3) 0 -v(1) ; -v(2) v(1) 0 ]; 
 end
 
-function X_next = lip_dynamics(X,u,ddxy_s,L,g)
+function ddXY = lip_dynamics(X,u,ddxy_s,L,g)
 
-A1 = [1 dT;
-     g/L*dT 1];
- 
-B1 = [0;
-     -dT*g/L];
-
-C1 = [0;
-     -ddxy_s(1)*dT];
-C2 = [0;
-     -ddxy_s(2)*dT];
-
-A = blkdiag(A1,A1);
-B = blkdiag(B1,B1);
-C = [C1;
-     C2];
-X_next = A*X + B*u + C;
-
-
+ddXY = g/L*(X-u)-ddxy_s;
 
 end

@@ -8,7 +8,7 @@ clear;
 % addpath(genpath('casadi-windows-matlabR2016a-v3.5.1'))
 import casadi.*
 % generate global symbolic functions:
-global Contact_Jacobian Rotm_foot MPC_controller x_z xy_com xy_com_act footprint xy_com_tank
+global Contact_Jacobian Rotm_foot MPC_controller x_z xy_com xy_com_act footprint xy_com_tank desire_traj last_u
 [Contact_Jacobian,Rotm_foot]=Formulate_Contact_Jacobian;
 
 L=0.525;
@@ -19,6 +19,8 @@ xy_com = [0;0;0;0];
 xy_com_tank = [0;0;0;0];
 xy_com_act = [0;0;0;0];
 footprint = [0;0];
+desire_traj = [];
+last_u = zeros(12,1);
 %% General (sim world physics)
 world_damping = 1e-3;
 world_rot_damping = 1e-3;

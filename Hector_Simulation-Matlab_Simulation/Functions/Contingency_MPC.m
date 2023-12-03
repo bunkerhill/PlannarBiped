@@ -3,7 +3,7 @@
 function u = Contingency_MPC(uin)
 tic
 %% MPC Parameters
-global i_MPC_var dt_MPC_vec gait x_traj_IC Contact_Jacobian Rotm_foot addArm MPC_controller x_z xy_com xy_com_act footprint xy_com_tank
+global i_MPC_var dt_MPC_vec gait x_traj_IC Contact_Jacobian Rotm_foot addArm MPC_controller x_z xy_com xy_com_act footprint xy_com_tank desire_traj
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -64,6 +64,7 @@ xy_com_tank = [xy_com_tank [0;xdes(4+6);0;xdes(5+6)]];% px vx py vy
 xy_com_act = [xy_com_act [x(4);x(10);x(5);x(11)]];% px vx py vy
 x_traj = Calc_x_traj(xdes,x,h,k); % desired trajectory
 foot_traj =[foot(1:3);foot(7:9)]; % assume foot under hip
+desire_traj = [desire_traj x_traj(:,1)];
 % alternatively, can use function Calc_foot_traj_3Dwalking for more
 % accurate foot position esitmate, may present some bugs for 3D locomotion
 
