@@ -3,7 +3,7 @@
 function u = Contingency_MPC_v2(uin)
 tic
 %% MPC Parameters
-global i_MPC_var dt_MPC_vec gait x_traj_IC Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait desire_traj
+global i_MPC_var dt_MPC_vec gait x_traj_IC I_error Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait desire_traj
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -44,43 +44,71 @@ v_act=x(10:12); % CoM velocity
 dT = 0.008;
 
 % contingency part
-L = 0.525;
-ddxy_s = [0;0];
-x_z_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],x_z,ddxy_s);
-MPC_controller = MPC_controller.updatetime(dT);
-x_z = x_z + dT * x_z_dot;
-ddxy_com = lip_dynamics([x(4);x(5)],x_z,ddxy_s,L,g);
-ddxyz_com = [ddxy_com;0];
-dxyz_com = v_act + ddxyz_com * dT;
-dxyz_com(3) = 0;
-xyz_com = x_act + dxyz_com * dT;
-xyz_com(3) = L;
-ddw_com = [0;0;0];
-dw_com = [0;0;0];
-w_com = [0;0;0];
-kp_p = 500;
-kd_p = 200;
-kp_w = 500;
-kd_w = 200;
-p_cddot = kp_p*(xyz_com-x_act) + kd_p*(dxyz_com-v_act) + ddxyz_com;
-w_cddot = kp_w*(w_com-RPY) + kd_w*(dw_com-w_act) + ddw_com;
-foot_traj =[foot(1:3);foot(7:9)]; % assume foot under hip
-desire_traj = [desire_traj [w_com;xyz_com;dw_com;dxyz_com]];
-% WBC control
-% kp_p = 250;
-% kd_p = 60;
-% kp_w = 250;
-% kd_w = 60;
-% x_traj = Calc_x_traj(xdes,x,dT)'; % desired trajectory
-% w_com = x_traj(1:3);
-% xyz_com = x_traj(4:6);
-% dw_com = x_traj(7:9);
-% dxyz_com = x_traj(10:12);
-% p_cddot = kp_p*(xyz_com-x_act) + kd_p*(dxyz_com-v_act);
-% w_cddot = kp_w*(w_com-RPY) + kd_w*(dw_com-w_act);
+% L = 0.525;
+% ddxy_s = [0;0];
+% x_z_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],x_z,ddxy_s);
+% MPC_controller = MPC_controller.updatetime(dT);
+% x_z = x_z + dT * x_z_dot;
+% ddxy_com = lip_dynamics([x(4);x(5)],x_z,ddxy_s,L,g);
+% ddxyz_com = [ddxy_com;0];
+% dxyz_com = v_act + ddxyz_com * dT;
+% dxyz_com(3) = 0;
+% xyz_com = x_act + dxyz_com * dT;
+% xyz_com(3) = L;
+% ddw_com = [0;0;0];
+% dw_com = [0;0;0];
+% w_com = [0;0;0];
+% kp_p = 500;
+% kd_p = 200;
+% kp_w = 500;
+% kd_w = 200;
+% p_cddot = kp_p*(xyz_com-x_act) + kd_p*(dxyz_com-v_act) + ddxyz_com;
+% w_cddot = kp_w*(w_com-RPY) + kd_w*(dw_com-w_act) + ddw_com;
 % foot_traj =[foot(1:3);foot(7:9)]; % assume foot under hip
-% desire_traj = [desire_traj x_traj];
+% desire_traj = [desire_traj [w_com;xyz_com;dw_com;dxyz_com]];
+% WBC control
+kp_p = diag([100 100 300]);
+kd_p = diag([10 10 50]);
+kp_w = diag([1600 1600 1600]);
+kd_w = diag([50 50 50]);
+x_traj = Calc_x_traj(xdes,x,dT)'; % desired trajectory
+w_com = x_traj(1:3);
+xyz_com = x_traj(4:6);
+dw_com = x_traj(7:9);
+dxyz_com = x_traj(10:12);
+p_cddot = kp_p*(xyz_com-x_act) + kd_p*(dxyz_com-v_act);
 
+%%
+if w_com(3) == RPY(3) & w_com(2) == RPY(2) & w_com(1) == RPY(1)
+    rpy_error = [0;0;0];
+else
+    R1 = eul2rotm([w_com(3),w_com(2),w_com(1)], 'ZYX');
+    R2 = eul2rotm([RPY(3),RPY(2),RPY(1)], 'ZYX');
+    R_error = R1 * R2';
+    
+    % 使用logm函数计算对数映射
+    log_R_error = logm(R_error);
+
+    % 提取反对称矩阵部分
+    skew_symmetric_matrix = (log_R_error - log_R_error') / 2;
+
+    % 提取旋转轴和角度
+    angle_error = norm([skew_symmetric_matrix(3,2); skew_symmetric_matrix(1,3); skew_symmetric_matrix(2,1)], 2);
+    axis_error = [skew_symmetric_matrix(3,2); skew_symmetric_matrix(1,3); skew_symmetric_matrix(2,1)] / sin(angle_error);
+
+    % 定义轴角表示法
+    axis_angle = [axis_error(3) axis_error(2) axis_error(1) angle_error];  % [x, y, z, angle]
+    % axis_angle = rotm2axang(R_error);
+    % 转换为欧拉角
+    Rotm = axang2rotm(axis_angle);  % 'ZYX' 表示旋转顺序为 ZYX
+    rpy_error = rotm2eul(Rotm, 'ZYX')';
+end
+%%
+I_error = I_error + rpy_error
+w_cddot = kp_w*rpy_error + kd_w*(dw_com-w_act) + 5 * I_error;
+foot_traj =[foot(1:3);foot(7:9)]; % assume foot under hip
+% desire_traj = [desire_traj x_traj];
+desire_traj = [desire_traj rpy_error];
 %% Robot simplified dynamics physical properties 
 mu = 0.5; %friction coefficient
 if addArm
@@ -108,7 +136,7 @@ I = R*Ib*R'; % MoI in world frame
 % continuous A & b:
 A=[eye(3), eye(3), zeros(3),zeros(3);
     skew(-x(4:6,1) + foot_traj(1:3,1)), skew(-x(4:6,1) + foot_traj(4:6,1)), eye(3), eye(3)];
-b = [m*(p_cddot+[0;0;-g]);
+b = [m*(p_cddot+[0;0;g]);
     I*w_cddot];
 
 %% MPC Weights: (tune these according to your task)
