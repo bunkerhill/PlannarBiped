@@ -25,16 +25,16 @@ eul_des = xdes(1:3);
 R = eul2rotm(flip(eul'));
 
 % enforce "2*pi=0" relation for turning
-yaw_correction=0;
-while yaw_correction==0
-    if eul_des(3,1)-eul(3,1)>pi
-        eul(3,1)=eul(3,1)+2*pi;
-    elseif eul_des(3,1)-eul(3,1)<-pi
-        eul(3,1)=eul(3,1)-2*pi;
-    else
-        yaw_correction=1;
-    end
-end
+% yaw_correction=0;
+% while yaw_correction==0
+%     if eul_des(3,1)-eul(3,1)>pi
+%         eul(3,1)=eul(3,1)+2*pi;
+%     elseif eul_des(3,1)-eul(3,1)<-pi
+%         eul(3,1)=eul(3,1)-2*pi;
+%     else
+%         yaw_correction=1;
+%     end
+% end
 
 % rearrange MPC states
 xdes = [xdes;g];
