@@ -82,3 +82,71 @@ right_shankBody = RigidBody2D('Name', 'right_shank', 'CoordinateFrame', right_sh
 % Right foot
 right_foot = CoordinateFrame2D('Name', 'right_foot', 'ParentFrame', right_shank, 'Rotation', SO2(theta6), 'Displacement', Point2D('Y', -l_shank));
 right_footBody = RigidBody2D('Name', 'right_foot', 'CoordinateFrame', right_foot, 'Mass', m_foot, 'CenterOfMassInBodyFrame', com_foot, 'MomentOfInertia', I_foot);
+
+%% Calculate Energy
+
+% total kinetic energy
+KE_torso = torsoBody.getKineticEnergy(generalCoordinates, generalVelocities);
+KE_left_thigh = left_thighBody.getKineticEnergy(generalCoordinates, generalVelocities);
+KE_left_shank = left_shankBody.getKineticEnergy(generalCoordinates, generalVelocities);
+KE_left_foot = left_footBody.getKineticEnergy(generalCoordinates, generalVelocities);
+KE_right_thigh = right_thighBody.getKineticEnergy(generalCoordinates, generalVelocities);
+KE_right_shank = right_shankBody.getKineticEnergy(generalCoordinates, generalVelocities);
+KE_right_foot = right_footBody.getKineticEnergy(generalCoordinates, generalVelocities);
+KE = KE_torso + KE_left_thigh + KE_left_shank + KE_left_foot + KE_right_thigh + KE_right_shank + KE_right_foot;
+
+KE = simplify(KE)
+
+% total potential energy
+
+PE_torso = torsoBody.getPotentialEnerge();
+PE_left_thigh = left_thighBody.getPotentialEnerge();
+PE_left_shank = left_shankBody.getPotentialEnerge();
+PE_left_foot = left_footBody.getPotentialEnerge();
+PE_right_thigh = right_thighBody.getPotentialEnerge();
+PE_right_shank = right_shankBody.getPotentialEnerge();
+PE_right_foot = right_footBody.getPotentialEnerge();
+PE = PE_torso + PE_left_thigh + PE_left_shank + PE_left_foot + PE_right_thigh + PE_right_shank + PE_right_foot;
+
+PE = simplify(PE)
+
+%% Calculate Dynamics Equation using Lagrange
+
+% gravity vector
+G_vect = jacobian(PE,generalCoordinates).';
+G_vect = simplify(G_vect);
+
+% mass-inertial matrix
+D_mtx = simplify(jacobian(KE,generalVelocities).');
+D_mtx = simplify(jacobian(D_mtx,generalVelocities));
+
+% Coriolis and centrifugal matrix
+syms C_mtx real
+n=max(size(generalCoordinates));
+for k=1:n
+	for j=1:n
+		C_mtx(k,j)=0;
+		for i=1:n
+			C_mtx(k,j)=C_mtx(k,j)+1/2*(diff(D_mtx(k,j),generalCoordinates(i)) + ...
+				diff(D_mtx(k,i),generalCoordinates(j)) - ...
+				diff(D_mtx(i,j),generalCoordinates(k)))*generalVelocities(i);
+		end
+	end
+end
+C_mtx=simplify(C_mtx);
+
+% input matrix
+Phi_0 = [theta1;
+         theta2;
+         theta3;
+         theta4;
+         theta5;
+         theta6];
+B_mtx = jacobian(Phi_0,generalCoordinates).';
+
+% swing foot force input matrix (F_ext = [F_x;F_y;M_z])
+% when right leg is in stance phase
+Phi_1 = [right_footBody.getCOMPosition(); right_footBody.getRigidBodyAngle()];
+E_mtx = jacobian(Phi_1,generalCoordinates).';
+right_footBody = RigidBody2D('Name', 'right_foot', 'CoordinateFrame', right_foot, 'Mass', m_foot, 'CenterOfMassInBodyFrame', com_foot, 'MomentOfInertia', I_foot);
+

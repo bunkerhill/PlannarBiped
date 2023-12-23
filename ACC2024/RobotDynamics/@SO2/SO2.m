@@ -10,7 +10,7 @@ classdef SO2
 
     methods
         function obj = SO2(theta_in)
-            obj.Theta = theta_in;
+            obj.Theta = -theta_in;
             obj.Matrix = [cos(obj.Theta), -sin(obj.Theta);
                       sin(obj.Theta), cos(obj.Theta)];
         end

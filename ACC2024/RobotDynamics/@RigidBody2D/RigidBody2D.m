@@ -46,9 +46,15 @@ classdef RigidBody2D
             end
 
         end
-
+        
+        % [x,y,theta]
         function position = forwardKinematics(obj, pointInBodyFrame)
             position = obj.CoordinateFrame.HomogeneousFromBase * [pointInBodyFrame.ColumnVector; 1];
+            position = [position; obj.CoordinateFrame.RotationFromBase.Theta];
+        end
+        
+        function angle = getRigidBodyAngle(obj)
+            angle = obj.CoordinateFrame.RotationFromBase.Theta;
         end
 
         function position = getCOMPosition(obj)
