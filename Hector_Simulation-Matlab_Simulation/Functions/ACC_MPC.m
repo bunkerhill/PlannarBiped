@@ -48,11 +48,11 @@ classdef ACC_MPC
             obj.foot_width = 0.02;
             obj.step_size = 0.15;
             obj.step_width = 0.15;
-            obj.single_support_time = 0.15;
-            obj.double_support_time = 0.05;
+            obj.single_support_time = 0.19;
+            obj.double_support_time = 0.01;
             obj.gait_time = obj.single_support_time + obj.double_support_time;
             obj.tim = 0;
-            obj.distime = 0;
+            obj.distime = 0.2;
             
         end
         
@@ -77,10 +77,10 @@ classdef ACC_MPC
             end
             Aeq1 = (1-lamda)/omega/(1-lamda^vector_length)*b_T;
             Aeq = blkdiag(Aeq1,Aeq1);
-            beq = [x(1)+x(2)/omega-p_z(1)+1/(omega^2)*ddxy_s(1)*(exp(-omega*obj.T_h)-1);
-                   x(3)+x(4)/omega-p_z(2)+1/(omega^2)*ddxy_s(2)*(exp(-omega*obj.T_h)-1)];
-%             beq = [x(1)+x(2)/omega-p_z(1);
-%                    x(3)+x(4)/omega-p_z(2)];
+            % beq = [x(1)+x(2)/omega-p_z(1)+1/(omega^2)*ddxy_s(1)*(exp(-omega*obj.T_h)-1);
+            %        x(3)+x(4)/omega-p_z(2)+1/(omega^2)*ddxy_s(2)*(exp(-omega*obj.T_h)-1)];
+            beq = [x(1)+x(2)/omega-p_z(1);
+                   x(3)+x(4)/omega-p_z(2)];
 
             % control constraint
             lb = []; 

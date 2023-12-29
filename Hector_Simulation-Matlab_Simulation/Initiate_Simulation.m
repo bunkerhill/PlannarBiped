@@ -80,7 +80,7 @@ mark_cloud_x=reshape(mark_cloud_x,[length(mark_x)*length(mark_y),1]);
 mark_cloud_y=repmat(mark_y',length(mark_x),1);
 mark_cloud=[mark_cloud_x,mark_cloud_y,zeros(length(mark_x)*length(mark_y),1)];
 
-scatter3(contact_cloud(:,1),contact_cloud(:,2),contact_cloud(:,3))
+% scatter3(contact_cloud(:,1),contact_cloud(:,2),contact_cloud(:,3))
 axis equal 
 %% vairable MPC dt (feature will be implemented soon)
 % See function AssignMPCStage(t) %

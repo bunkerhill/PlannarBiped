@@ -93,7 +93,7 @@ if t<=0.002
     current_height=x_act(3);
 end
 
-if fpR(3)<=0.002&&swing_schedule(1)==0
+if fpR(3)<=0.002&&swing_schedule(1)==0 % left leg swing
     stand_position(1:3,1)=fpR;
 end
 if fpL(3)<=0.002&&swing_schedule(2)==0
@@ -164,20 +164,31 @@ fpR_end = [fx_end_R;fy_end_R;fzend];
 feedback_ratio=t_halfcycle/delta_t;
 height_feedback=0;
 feedback_limit=0.03;
+% why?
 x_act(3)=current_height+min(height_feedback*(xdes(6)-current_height),feedback_limit);
 qR_des = foot_to_joint(fpR_des-x_act(1:3),q(1:5,1),Rotm,eul,feedback_ratio,1);
 qL_des = foot_to_joint(fpL_des-x_act(1:3),q(6:10,1),Rotm,eul,feedback_ratio,-1);
 
 Kp = diag([100 100 100 100 5]); Kd = diag([2 2 2 2 0.1]);
 
+% old strategy
 tau1 = (Kp*(qR_des - q(1:5)) + Kd*(0 - qd(1:5))).*swing_schedule(1);
 tau2 = (Kp*(qL_des - q(6:10)) + Kd*(0 - qd(6:10))).*swing_schedule(2);
 
+% new strategy
 % if swing_schedule(1)==0 % left leg swings
-%     tau1(2) = -100*(0-RPY(1))-20*(0-w_act(1));
+%     tau2 = (Kp*(qL_des - q(6:10)) + Kd*(0 - qd(6:10)));
+%     fpR_des = [fx_des_R;fy_des_R;0];
+%     qR_des = foot_to_joint(fpR_des-x_act(1:3),q(1:5,1),Rotm,eul,feedback_ratio,1);
+%     tau1 = (5*(qR_des - q(1:5)) + Kd*(0 - qd(1:5)));
+%     % tau1(2) = -100*(0-RPY(1))-20*(0-w_act(1));
 % end
 % if swing_schedule(2)==0
-%     tau2(2) = -100*(0-RPY(1))-20*(0-w_act(1));
+%     tau1 = (Kp*(qR_des - q(1:5)) + Kd*(0 - qd(1:5)));
+%     fpL_des = [fx_des_L;fy_des_L;0];
+%     qL_des = foot_to_joint(fpL_des-x_act(1:3),q(6:10,1),Rotm,eul,feedback_ratio,-1);
+%     tau2 = (5*(qL_des - q(6:10)) + Kd*(0 - qd(6:10)));
+%     % tau2(2) = -100*(0-RPY(1))-20*(0-w_act(1));
 % end
 
 tau = [tau1;tau2];

@@ -3,7 +3,7 @@
 function u = Contingency_MPC_v2(uin)
 tic
 %% MPC Parameters
-global i_MPC_var dt_MPC_vec gait x_traj_IC I_error Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait desire_traj
+global i_MPC_var dt_MPC_vec gait x_traj_IC I_error Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait u_zmp desire_traj
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -44,18 +44,28 @@ v_act=x(10:12); % CoM velocity
 dT = 0.008;
 
 % contingency part
-% L = 0.525;
-% ddxy_s = [0;0];
-% if (i_gait==0) % R stance
-%     x_z = foot(1:2);
-% else
-%     x_z = foot(4:5);
-% end
-% u_zmp_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],x_z,ddxy_s);
-% MPC_controller = MPC_controller.updatetime(dT);
-% u_zmp = x_z + dT * u_zmp_dot;
-% ddxy_com = lip_dynamics([x(4);x(5)],u_zmp,ddxy_s,L,g);
-% ddxyz_com = [ddxy_com;0];
+L = 0.525;
+ddxy_s = [0;0];
+if (MPC_controller.tim <= 0.2)
+    x_z = (foot(1:2)+foot(4:5))/2;
+    if (MPC_controller.tim <= 0.01)
+        u_zmp = x_z;
+    end
+else
+    if (i_gait==0) % R stance
+        x_z = foot(1:2);
+    else
+        x_z = foot(4:5);
+    end
+end
+x_z
+u_zmp_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],u_zmp,ddxy_s);
+MPC_controller = MPC_controller.updatetime(dT);
+u_zmp = x_z + dT * u_zmp_dot;
+ddxy_com = lip_dynamics([x(4);x(5)],u_zmp,ddxy_s,L,g);
+ddxyz_com = [ddxy_com;0];
+
+
 % dxyz_com = v_act + ddxyz_com * dT;
 % dxyz_com(3) = 0;
 % xyz_com = x_act + dxyz_com * dT;
@@ -68,13 +78,13 @@ dT = 0.008;
 % kp_w = diag([1600 1600 0]);
 % kd_w = diag([50 50 10]);
 % p_cddot = kp_p*(xyz_com-x_act) + kd_p*(dxyz_com-v_act) + ddxyz_com;
-% % w_cddot = kp_w*(w_com-RPY) + kd_w*(dw_com-w_act) + ddw_com;
-% % foot_traj =[foot(1:3);foot(7:9)]; % assume foot under hip
+% w_cddot = kp_w*(w_com-RPY) + kd_w*(dw_com-w_act) + ddw_com;
+% foot_traj =[foot(1:3);foot(7:9)]; % assume foot under hip
 % desire_traj = [desire_traj [w_com;xyz_com;dw_com;dxyz_com;ddxyz_com]];
 
 % ordinary control part
-kp_p = diag([150 150 300]);
-kd_p = diag([50 50 50]);
+kp_p = diag([0 0 300]);
+kd_p = diag([0 0 50]);
 kp_w = diag([1300 1300 1300]);
 kd_w = diag([100 100 100]);
 x_traj = Calc_x_traj(xdes,x,dT)'; % desired trajectory
@@ -82,7 +92,7 @@ w_com = x_traj(1:3);
 xyz_com = x_traj(4:6);
 dw_com = x_traj(7:9);
 dxyz_com = x_traj(10:12);
-p_cddot = kp_p*(xyz_com-x_act) + kd_p*(dxyz_com-v_act);
+p_cddot = kp_p*(xyz_com-x_act) + kd_p*(dxyz_com-v_act) + [0.8;0;0];
 
 %%
 if w_com(3) == RPY(3) & w_com(2) == RPY(2) & w_com(1) == RPY(1)
@@ -113,7 +123,7 @@ else
     rpy_error = axis_angle(1:3)'*axis_angle(4);
 end
 %%
-I_error = I_error + rpy_error
+I_error = I_error + rpy_error;
 % I_error = [0;0;0];
 w_cddot = kp_w*rpy_error + kd_w*(dw_com-w_act) + 1.5 * I_error;
 foot_traj =[foot(1:3);foot(7:9)]; % assume foot under hip
@@ -148,7 +158,6 @@ A=[eye(3), eye(3), zeros(3),zeros(3);
     skew(-x(4:6,1) + foot_traj(1:3,1)), skew(-x(4:6,1) + foot_traj(4:6,1)), eye(3), eye(3)];
 b = [m*(p_cddot+[0;0;g]);
     I*w_cddot];
-
 %% MPC Weights: (tune these according to your task)
 % state tracking objective:
 L = [100 0 0 0 0 0;
@@ -269,21 +278,21 @@ S = conic('S','qpoases',qp,opts);
 r = S('h', H, 'g', g, 'a', Ac, 'lba',lba, 'uba', uba);
 
 % solve!:
-tic
+% tic
 x_opt = r.x;
 % disp(x_opt(1:12));
-disp(' ');
-disp(['MPC Time Step:',num2str(k)]);
-disp('QPOASES-MPC Solve Time:');
-toc
+% disp(' ');
+% disp(['MPC Time Step:',num2str(k)]);
+% disp('QPOASES-MPC Solve Time:');
+% toc
 
 GRFM = full(x_opt);
 GRFM = GRFM(1:12);
 % u=-contact_mapping*GRFM(1:12); 
 u=[GRFM(1:12)];
 
-disp('QPOASES-MPC Function Total Time:');
-toc
+% disp('QPOASES-MPC Function Total Time:');
+% toc
 last_u = u;
 
 
