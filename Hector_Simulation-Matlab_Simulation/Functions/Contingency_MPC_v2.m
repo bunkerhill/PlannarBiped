@@ -14,6 +14,7 @@ numVar = 12;
 numCons = 34;
 %% Making definition consistent with MPC
 % input definition
+%%%%%% All the variables below are in world frame %%%%%%
 xdes=uin(1:12); % desired states [eul, p, omega, v]'
 x=uin(13:24); % current states [eul, p, omega, v]'
 q=uin(25:34); % joint angles [q_L, q_R]'
@@ -37,57 +38,64 @@ R = eul2rotm(flip(eul'));
 
 %% Assigning desired trajectory for CoM and Foot locations
 
+%%%%%% All the variables below are in world frame %%%%%%
 RPY=x(1:3); % Roll Pitch Yaw
-x_act=x(4:6); % CoM position
-w_act=x(7:9); % Angular velocity
-v_act=x(10:12); % CoM velocity
-dT = 0.008;
+x_act=x(4:6); % CoM position (x,y,z)
+w_act=x(7:9); % Angular velocity (x,y,z)
+v_act=x(10:12); % CoM velocity (x,y,z)
+dT = 0.008; % control period (every 8ms run this code once)
 
-% contingency part
-% L = 0.525;
-% ddxy_s = [0;0];
-% if (MPC_controller.tim <= 0.2)
-%     x_z = (foot(1:2)+foot(4:5))/2;
-%     gait = 0;
-%     if (MPC_controller.tim <= 0.01)
-%         u_zmp = x_z;
-%     end
-% else
-%     gait = 1;
-%     if (i_gait==0) % R stance
-%         x_z = foot(1:2);
-%     else
-%         x_z = foot(4:5);
-%     end
-% end
-% MPC_controller.tim
-% u_zmp_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],u_zmp,ddxy_s);
-% MPC_controller = MPC_controller.updatetime(dT);
-% u_zmp = x_z + dT * u_zmp_dot;
-% ddxy_com = lip_dynamics([x(4);x(5)],u_zmp,ddxy_s,L,g);
-% ddxyz_com = [ddxy_com;0];
+% contingency MPC, only care about x-y plane motion
+L = 0.525; % the height of COM
+ddxy_s = [0;0]; % suppose the ground surface is not moving
+if (MPC_controller.tim <= 0.2)
+    x_z = (foot(1:2)+foot(4:5))/2;
+    gait = 0;
+    if (MPC_controller.tim <= 0.01)
+        u_zmp = x_z;
+    end
+else
+    gait = 1;
+    if (i_gait==0) % R stance
+        x_z = foot(1:2);
+    else
+        x_z = foot(4:5);
+    end
+end
+MPC_controller.tim
+u_zmp_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],u_zmp,ddxy_s);% get zmp velocity from Contingency MPC
+MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
+u_zmp = x_z + dT * u_zmp_dot; % integrate the zmp velocity from current foot location(actual foot location)
+ddxy_com = lip_dynamics([x(4);x(5)],u_zmp,ddxy_s,L,g);% use continuous lip model to calculate COM acceleration
+ddxyz_com = [ddxy_com;0];
 
-kp_p = diag([0 0 300]);
-kd_p = diag([0 0 50]);
-kp_w = diag([1300 1300 1300]);
-kd_w = diag([100 100 100]);
-x_traj = Calc_x_traj(xdes,x,dT)'; % desired trajectory
-w_com = x_traj(1:3);
-xyz_com = x_traj(4:6);
-dw_com = x_traj(7:9);
-dxyz_com = x_traj(10:12);
-p_cddot = kp_p*(xyz_com-x_act) + kd_p*(dxyz_com-v_act) ;
+% ground reaction force optimization, only optimize to maintain z direction position and body orientation
+kp_p = diag([0 0 300]); % kp weight for COM position (x,y,z) respectively
+kd_p = diag([0 0 50]); % kd weight for COM velocity (x,y,z) respectively
+kp_w = diag([1300 1300 1300]); % kp weight for COM axis angle (angx,angy,angz) respectively
+kd_w = diag([100 100 100]); % kd weight for COM angular velocity (wx,wy,wz) respectively
+x_traj = Calc_x_traj(xdes,x,dT)'; % get desired COM trajectory (position and axis angle will not be directly equal to user command)
+w_com = x_traj(1:3); %  COM axis angle
+xyz_com = x_traj(4:6); % COM position
+dw_com = x_traj(7:9); % COM angular velociy
+dxyz_com = x_traj(10:12); % COM velocity
 
-R1 = eul2rotm([w_com(3),w_com(2),w_com(1)], 'ZYX');
-R2 = eul2rotm([RPY(3),RPY(2),RPY(1)], 'ZYX');
-R_error = R1 * R2';
-axis_angle = rotm2axang(R_error);
-rpy_error = axis_angle(1:3)'*axis_angle(4);
-I_error = I_error + rpy_error;
+% For z direction, calculate desired COM linear acceleration with PD; 
+% For y and x directions, directly use acceleration from contingency MPC's output
+p_cddot = kp_p*(xyz_com-x_act) + kd_p*(dxyz_com-v_act) + ddxyz_com; 
+
+% Calculate desired COM angular acceleration with PID
+R1 = eul2rotm([w_com(3),w_com(2),w_com(1)], 'ZYX');% rotation matrix of desired COM axis angle
+R2 = eul2rotm([RPY(3),RPY(2),RPY(1)], 'ZYX');% rotation matrix of actual COM axis angle
+R_error = R1 * R2'; % get the error of two coordinates
+axis_angle = rotm2axang(R_error); % get axis angle from actual angle to desired angle
+rpy_error = axis_angle(1:3)'*axis_angle(4); % get rotate angle from actual angle to desired angle
+I_error = I_error + rpy_error; % integrate angle error
 % I_error = [0;0;0];
-w_cddot = kp_w*rpy_error + kd_w*(dw_com-w_act) + 1.5 * I_error;
+w_cddot = kp_w*rpy_error + kd_w*(dw_com-w_act) + 1.5 * I_error; % kI = 1.5
+
 foot_traj =[foot(1:3);foot(7:9)]; % assume foot under hip
-desire_traj = [desire_traj x_traj];
+desire_traj = [desire_traj x_traj]; % in order to plot desired trajectory
 % desire_traj = [desire_traj rpy_error];
 
 %% Robot simplified dynamics physical properties 
@@ -327,8 +335,8 @@ end
 function gaitm = gaitSchedule(i, gait)
 
 % walking 
-Rm = [0;0;0;0;0; 1;1;1;1;1];
-Lm = [1;1;1;1;1; 0;0;0;0;0];
+Lm = [0;0;0;0;0; 1;1;1;1;1];
+Rm = [1;1;1;1;1; 0;0;0;0;0];
 
 if(i==0) % R stance
     gaitm = Lm;

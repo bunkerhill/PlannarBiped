@@ -50,11 +50,11 @@ t_cycle = t-acc_t(ii);
 swing_schedule = zeros(2,1);
 if gait == 1 || gait == 3 % walking running
     if i_gait == 1
-        swing_schedule(1) = 1;
-        swing_schedule(2) = 0;
-    else
         swing_schedule(1) = 0;
         swing_schedule(2) = 1;
+    else
+        swing_schedule(1) = 1;
+        swing_schedule(2) = 0;
     end
 elseif gait == 2
     if i_gait == 1 %hopping
