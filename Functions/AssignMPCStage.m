@@ -1,4 +1,4 @@
-function [i_MPC_var,dt_MPC] = AssignMPCStage(t)
+function [i_gait] = AssignMPCStage(t)
 
 % This function is used for variable MPC dt in adaptive frequency MPC %
 

@@ -40,9 +40,9 @@ lGRF = out.MPCForce(:, 4:6);
 rGRM = out.MPCForce(:, 7:9);
 lGRM = out.MPCForce(:, 10:12);
 
-% figure, plot(timeGRF, lGRF(:,3),"b")
-% hold on,plot(timeGRF, rGRF(:,3),"r")
-% legend("lGRFz", "rGRFz")
+figure, plot(timeGRF, lGRF(:,3),"b")
+hold on,plot(timeGRF, rGRF(:,3),"r")
+legend("lGRFz", "rGRFz")
 % 
 % figure, plot(timeGRF, lGRF(:,1),"b")
 % hold on,plot(timeGRF, rGRF(:,1),"r")
