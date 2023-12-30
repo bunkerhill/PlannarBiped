@@ -12,8 +12,8 @@ ddxy_s_max = [1.15;1.15];
 ddxy_s_min = [-1.15;-1.15];
 
 % choose a MPC controller
-MPC_controller1 = intriMPC(g,L);
-MPC_controller2 = contiMPC(g,L,ddxy_s_max,ddxy_s_min);
+MPC_controller1 = ACC_MPC(g,L);
+% MPC_controller2 = contiMPC(g,L,ddxy_s_max,ddxy_s_min);
 
 % time step
 dT = 0.01;
@@ -25,7 +25,7 @@ T_s = 2;
 x0 = [0;0;0;0];
 T=0:dT:T_s;
 x_tank = zeros(4,length(T));
-x_tank(:,1) = x0; 
+x_tank(:,1) = x0;
 x_z = [0;0];
 u_tank = [0;0];
 
@@ -44,7 +44,7 @@ for i=2:length(T)
     current_T = T(i-1);
 
     x_z_dot = MPC_controller1.MPC(x_tank(:,i-1),x_z,ddxy_s);
-    MPC_controller1 = MPC_controller1.updatetime();
+    MPC_controller1 = MPC_controller1.updatetime(dT);
     x_z = x_z + dT * x_z_dot;
     u_tank = [u_tank, x_z];
     x_tank(:,i) = lip_dynamics(x_tank(:,i-1),x_z,ddxy_s,dT,L,g);

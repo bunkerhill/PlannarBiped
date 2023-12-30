@@ -52,7 +52,7 @@ classdef ACC_MPC
             obj.double_support_time = 0.01;
             obj.gait_time = obj.single_support_time + obj.double_support_time;
             obj.tim = 0;
-            obj.distime = 0.2;
+            obj.distime = 0.3;
             
         end
         
