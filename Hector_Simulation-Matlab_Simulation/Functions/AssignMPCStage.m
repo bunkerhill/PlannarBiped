@@ -5,14 +5,10 @@ function [i_MPC_var,dt_MPC] = AssignMPCStage(t)
 %  gait: walking = 1; hopping = 2; running = 3
 
 global acc_t dt_MPC_vec i_MPC_var dt_MPC i_gait gait
-    idx = find(acc_t<t+ 1e-3);  
+    idx = find(acc_t<t+ 1e-3);  %Find indices of nonzero elements.
     i_MPC_var = idx(end); % get current MPC stage index
     dt_MPC = dt_MPC_vec(i_MPC_var);
     idx_gait = rem(i_MPC_var,10); % get current gait index
-    if i_MPC_var >1
-        i_MPC_var = i_MPC_var;
-    end
-
     if gait <= 2
         if 1 <= idx_gait && idx_gait <= 5
             i_gait = 1;

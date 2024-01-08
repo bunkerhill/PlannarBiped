@@ -48,24 +48,24 @@ dT = 0.008; % control period (every 8ms run this code once)
 % contingency MPC, only care about x-y plane motion
 L = 0.525; % the height of COM
 ddxy_s = [0;0]; % suppose the ground surface is not moving
-if (MPC_controller.tim <= 0.2)
-    x_z = (foot(1:2)+foot(4:5))/2;
-    gait = 0;
-    if (MPC_controller.tim <= 0.01)
-        u_zmp = x_z;
-    end
-else
-    gait = 1;
-    if (i_gait==0) % R stance
-        x_z = foot(1:2);
-    else
-        x_z = foot(4:5);
-    end
-end
+% if (MPC_controller.tim <= 0.2)
+%     x_z = (foot(1:2)+foot(4:5))/2;
+%     gait = 0;
+%     if (MPC_controller.tim <= 0.01)
+%         u_zmp = x_z;
+%     end
+% else
+%     gait = 1;
+%     if (i_gait==0) % R stance
+%         x_z = foot(1:2);
+%     else
+%         x_z = foot(4:5);
+%     end
+% end
 MPC_controller.tim
-u_zmp_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],u_zmp,ddxy_s);% get zmp velocity from Contingency MPC
+u_zmp_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],u_zmp,ddxy_s);% get zmp velocity from Contingency MPC  %%% u_zmp 
 MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
-u_zmp = x_z + dT * u_zmp_dot; % integrate the zmp velocity from current foot location(actual foot location)
+u_zmp = u_zmp + dT * u_zmp_dot; % integrate the zmp velocity from current foot location(actual foot location)  %%% x_z -> u_zmp
 ddxy_com = lip_dynamics([x(4);x(5)],u_zmp,ddxy_s,L,g);% use continuous lip model to calculate COM acceleration
 ddxyz_com = [ddxy_com;0];
 
