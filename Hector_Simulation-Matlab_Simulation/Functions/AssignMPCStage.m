@@ -10,6 +10,8 @@ global acc_t dt_MPC_vec i_MPC_var dt_MPC i_gait gait global_t
     % stand on two feet
     if t < 0.2
         gait = 0;
+        i_MPC_var = 1;
+        dt_MPC = dt_MPC_vec(i_MPC_var);
     % walk
     else
         gait = 1;
