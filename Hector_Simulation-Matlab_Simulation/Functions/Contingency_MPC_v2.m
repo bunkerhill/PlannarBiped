@@ -3,7 +3,7 @@
 function u = Contingency_MPC_v2(uin)
 tic
 %% MPC Parameters
-global i_MPC_var dt_MPC_vec gait x_traj_IC I_error Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait u_zmp desire_traj
+global i_MPC_var dt_MPC_vec gait x_traj_IC I_error Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait u_zmp desire_traj global_t
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -63,6 +63,7 @@ ddxy_s = [0;0]; % suppose the ground surface is not moving
 %     end
 % end
 MPC_controller.tim
+global_t
 u_zmp_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],u_zmp,ddxy_s);% get zmp velocity from Contingency MPC  %%% u_zmp 
 MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
 u_zmp = u_zmp + dT * u_zmp_dot; % integrate the zmp velocity from current foot location(actual foot location)  %%% x_z -> u_zmp
@@ -192,7 +193,7 @@ A_LF = [A_LF1;A_LF2];
 A_tau = contact_mapping;
 % gait are implemented here to zero out the swing leg control inputs
 if gait == 1
-    gaitm = gaitSchedule(i_gait, 1);
+    gaitm = gaitSchedule(i_gait);
 elseif gait == 0
     gaitm = ones(10,1);
 end
@@ -332,16 +333,16 @@ end
 
 end
 
-function gaitm = gaitSchedule(i, gait)
+function gaitm = gaitSchedule(i)
 
 % walking 
 Lm = [0;0;0;0;0; 1;1;1;1;1];
 Rm = [1;1;1;1;1; 0;0;0;0;0];
 
 if(i==0) % R stance
-    gaitm = Lm;
-else
     gaitm = Rm;
+else
+    gaitm = Lm;
 end
 
 end

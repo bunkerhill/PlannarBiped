@@ -7,6 +7,8 @@ function tau=Swing_PD(uin)
 
 global  dt_MPC gait i_gait acc_t i_MPC_var dt_MPC_vec stand_position current_height MPC_controller
 t=uin(1);
+if t < 0.2
+    t = 0;
 xdes=uin(2:13); % desired SRBD states
 x=uin(14:25); % actual SRBD states
 q=uin(26:35); % joint states
@@ -172,22 +174,24 @@ qL_des = foot_to_joint(fpL_des-x_act(1:3),q(6:10,1),Rotm,eul,feedback_ratio,-1);
 Kp = diag([100 100 100 100 5]); Kd = diag([2 2 2 2 0.1]);
 
 % old strategy
-% tau1 = (Kp*(qR_des - q(1:5)) + Kd*(0 - qd(1:5))).*swing_schedule(1);
-% tau2 = (Kp*(qL_des - q(6:10)) + Kd*(0 - qd(6:10))).*swing_schedule(2);
+tau1 = (Kp*(qR_des - q(1:5)) + Kd*(0 - qd(1:5))).*swing_schedule(1);
+tau2 = (Kp*(qL_des - q(6:10)) + Kd*(0 - qd(6:10))).*swing_schedule(2);
 
 % new strategy
-% tau1 = (Kp*(qR_des - q(1:5)) + Kd*(0 - qd(1:5)));
-% tau2 = (Kp*(qL_des - q(6:10)) + Kd*(0 - qd(6:10)));
-if swing_schedule(1)==0 % left leg swings
-    tau2 = (Kp*(qL_des - q(6:10)) + Kd*(0 - qd(6:10)));
-    fpR_des = [fx_des_R;fy_des_R;fzdes];
-    qR_des = foot_to_joint(fpR_des-x_act(1:3),q(1:5,1),Rotm,eul,feedback_ratio,1);
-    tau1 = (Kp*(qR_des - q(1:5)) + Kd*(0 - qd(1:5)));
-    % tau1(2) = -100*(0-RPY(1))-20*(0-w_act(1));
-end
-if swing_schedule(2)==0
-    % tau2(2) = -100*(0-RPY(1))-20*(0-w_act(1));
-end
+% if swing_schedule(1)==0 % left leg swings
+%     tau2 = (Kp*(qL_des - q(6:10)) + Kd*(0 - qd(6:10)));
+%     fpR_des = [fx_des_R;fy_des_R;0];
+%     qR_des = foot_to_joint(fpR_des-x_act(1:3),q(1:5,1),Rotm,eul,feedback_ratio,1);
+%     tau1 = (5*(qR_des - q(1:5)) + Kd*(0 - qd(1:5)));
+%     % tau1(2) = -100*(0-RPY(1))-20*(0-w_act(1));
+% end
+% if swing_schedule(2)==0
+%     tau1 = (Kp*(qR_des - q(1:5)) + Kd*(0 - qd(1:5)));
+%     fpL_des = [fx_des_L;fy_des_L;0];
+%     qL_des = foot_to_joint(fpL_des-x_act(1:3),q(6:10,1),Rotm,eul,feedback_ratio,-1);
+%     tau2 = (5*(qL_des - q(6:10)) + Kd*(0 - qd(6:10)));
+%     % tau2(2) = -100*(0-RPY(1))-20*(0-w_act(1));
+% end
 
 tau = [tau1;tau2];
 
