@@ -3,7 +3,8 @@
 function u = Contingency_MPC(uin)
 tic
 %% MPC Parameters
-global i_MPC_var dt_MPC_vec gait x_traj_IC Contact_Jacobian Rotm_foot addArm MPC_controller x_z xy_com xy_com_act footprint xy_com_tank desire_traj
+global i_MPC_var dt_MPC_vec gait x_traj_IC Contact_Jacobian Rotm_foot addArm MPC_controller x_z xy_com xy_com_act footprint xy_com_tank desire_traj i_gait u_zmp global_t
+global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -45,26 +46,56 @@ if k == 1
     x_traj = x_traj_IC
 end
 dT = 0.008;
-L = 0.525;
-ddxy_s = [0;0];
-% x_z_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],x_z,ddxy_s);
-% MPC_controller = MPC_controller.updatetime();
-% 
-% x_z = x_z + dT * x_z_dot;
-% xy_com = lip_dynamics([x(4);x(10);x(5);x(11)],x_z,ddxy_s,dT,L,g);
-% % [x(10);x(11)]
-% xy_com_act = [xy_com_act [x(4);x(10);x(5);x(11)]];% px vx py vy
+
+% contingency MPC, only care about x-y plane motion
+L = 0.525; % the height of COM
+ddxy_s = [0;0]; % suppose the ground surface is not moving
+
+% for the beginning of stand on two feet, xy_com is the same as initial actual com
+if global_t==0
+    xy_com=[x(4);x(10);x(5);x(11)];
+end
+
+% get important data(predicted zmp and actual zmp)
+if (i_gait==0) % R stance
+    x_z = foot(1:2);
+else
+    x_z = foot(7:8);
+end
+% for stand on two feet, x_z is in the middle of two feet
+if global_t <= 0.2
+    x_z = (foot(1:2)+foot(7:8))/2;
+end
+u_zmp_tank = [u_zmp_tank u_zmp];
+x_z_tank = [x_z_tank x_z];
+
+u_zmp_dot = MPC_controller.MPC(xy_com,u_zmp,ddxy_s);% get zmp velocity from Contingency MPC  %%% u_zmp 
+MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
+u_zmp = u_zmp + dT * u_zmp_dot; % integrate the zmp velocity  %%% x_z -> u_zmp
+
+% method 1
+ddxy_com = lip_dynamics(xy_com([1,3]),u_zmp,ddxy_s,L,g);% use continuous lip model to calculate COM acceleration
+ddxyz_com = [ddxy_com;0];
+
+% method 2
+xy_com = lip_dynamics_discrete(xy_com,u_zmp,ddxy_s,dT,L,g);
+
+% print
+xy_com_record = [xy_com(1);xy_com(3);xy_com(2);xy_com(4);ddxy_com];
+ddxyz_com_tank = [ddxyz_com_tank xy_com_record];
 footprint = [footprint [MPC_controller.step_size;MPC_controller.step_width]];
 
-% xdes(4+6) = xy_com(2); %vx
-% xdes(5+6) = xy_com(4); %vy
+xdes(4) = xy_com(1); %px
+xdes(5) = xy_com(3); %py
+xdes(4+6) = xy_com(2); %vx
+xdes(5+6) = xy_com(4); %vy
 % xdes(4+6) = sin(dT*100); %vx
 % xdes(5+6) = 0; %vy
 % xy_com_tank = [xy_com_tank [0;xdes(4+6);0;xdes(5+6)]];% px vx py vy
 % xy_com_act = [xy_com_act [x(4);x(10);x(5);x(11)]];% px vx py vy
 x_traj = Calc_x_traj(xdes,x,h,k); % desired trajectory
 foot_traj =[foot(1:3);foot(7:9)]; % assume foot under hip
-% desire_traj = [desire_traj x_traj(:,1)];
+desire_traj = [desire_traj x_traj(:,1)];
 % alternatively, can use function Calc_foot_traj_3Dwalking for more
 % accurate foot position esitmate, may present some bugs for 3D locomotion
 
@@ -331,11 +362,12 @@ function x_traj = Calc_x_traj(xdes,x,h,k)
 global dt_MPC_vec 
  for i = 0:h-1
      for j = 1:6
-         if xdes(6+j) == 0
+         if xdes(6+j) == 0 % if velocity is zero, then position use desired position
              x_traj(j,i+1) = xdes(j) + xdes(6+j)*sum(dt_MPC_vec(k:k+i));
          else
-
-             x_traj(j,i+1) = x(j) + xdes(6+j)*sum(dt_MPC_vec(k:k+i));
+             % if velocity is not zero, then position use current position
+             % plus vt
+             x_traj(j,i+1) = xdes(j) + xdes(6+j)*sum(dt_MPC_vec(k:k+i));
          end
          x_traj(6+j,i+1) = xdes(6+j);
      end
@@ -366,7 +398,13 @@ function A= skew(v)
  A=[0 -v(3) v(2) ; v(3) 0 -v(1) ; -v(2) v(1) 0 ]; 
 end
 
-function X_next = lip_dynamics(X,u,ddxy_s,dT,L,g)
+function ddXY = lip_dynamics(X,u,ddxy_s,L,g)
+
+ddXY = g/L*(X-u)-ddxy_s;
+
+end
+
+function X_next = lip_dynamics_discrete(X,u,ddxy_s,dT,L,g)
 
 A1 = [1 dT;
      g/L*dT 1];

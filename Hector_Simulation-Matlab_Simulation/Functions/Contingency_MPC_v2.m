@@ -105,8 +105,8 @@ xy_com_record = [xy_com(1);xy_com(3);xy_com(2);xy_com(4);ddxy_com];
 ddxyz_com_tank = [ddxyz_com_tank xy_com_record];
 
 % ground reaction force optimization, only optimize to maintain z direction position and body orientation
-kp_p = diag([200 200 300]); % kp weight for COM position (x,y,z) respectively
-kd_p = diag([30 30 50]); % kd weight for COM velocity (x,y,z) respectively
+kp_p = diag([250 250 300]); % kp weight for COM position (x,y,z) respectively
+kd_p = diag([40 40 50]); % kd weight for COM velocity (x,y,z) respectively
 kp_w = diag([1300 1300 1300]); % kp weight for COM axis angle (angx,angy,angz) respectively
 kd_w = diag([100 100 100]); % kd weight for COM angular velocity (wx,wy,wz) respectively
 x_traj = Calc_x_traj(xdes,x,dT)'; % get desired COM trajectory (position and axis angle will not be directly equal to user command)
@@ -361,9 +361,9 @@ end
 function x_traj = Calc_x_traj(xdes,x,dt)
 
 for j = 1:6
-     if xdes(6+j) == 0
+     if xdes(6+j) == 0 % if velocity is zero, then position use desired position
          x_traj(j) = xdes(j) + xdes(6+j)*dt;
-     else
+     else % if velocity is not zero, then position use current position
          x_traj(j) = x(j) + xdes(6+j)*dt;
      end
      x_traj(6+j) = xdes(6+j);
