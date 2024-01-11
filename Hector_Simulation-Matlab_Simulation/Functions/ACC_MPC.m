@@ -46,7 +46,7 @@ classdef ACC_MPC
             obj.T_h = 1;
             obj.foot_length = 0.12;
             obj.foot_width = 0.02;
-            obj.step_size = 0.08;
+            obj.step_size = 0.15;
             obj.step_width = 0.15;
             obj.single_support_time = 0.19;
             obj.double_support_time = 0.01;

@@ -71,6 +71,11 @@ global_t
 %     u_zmp = (foot(1:2)+foot(7:8))/2;
 % end
 
+% for the beginning of stand on two feet, xy_com is the same as initial actual com
+if global_t==0
+    xy_com=[x(4);x(10);x(5);x(11)];
+end
+
 % get important data(predicted zmp and actual zmp)
 if (i_gait==0) % R stance
     x_z = foot(1:2);
@@ -84,24 +89,24 @@ end
 u_zmp_tank = [u_zmp_tank u_zmp];
 x_z_tank = [x_z_tank x_z];
 
-u_zmp_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],u_zmp,ddxy_s);% get zmp velocity from Contingency MPC  %%% u_zmp 
+u_zmp_dot = MPC_controller.MPC(xy_com,u_zmp,ddxy_s);% get zmp velocity from Contingency MPC  %%% u_zmp 
 MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
 u_zmp = u_zmp + dT * u_zmp_dot; % integrate the zmp velocity  %%% x_z -> u_zmp
 
 % method 1
-ddxy_com = lip_dynamics([x(4);x(5)],u_zmp,ddxy_s,L,g);% use continuous lip model to calculate COM acceleration
+ddxy_com = lip_dynamics(xy_com([1,3]),u_zmp,ddxy_s,L,g);% use continuous lip model to calculate COM acceleration
 ddxyz_com = [ddxy_com;0];
 
 % method 2
-xy_com = lip_dynamics_discrete([x(4);x(10);x(5);x(11)],u_zmp,ddxy_s,dT,L,g);
+xy_com = lip_dynamics_discrete(xy_com,u_zmp,ddxy_s,dT,L,g);
 
 % print
 xy_com_record = [xy_com(1);xy_com(3);xy_com(2);xy_com(4);ddxy_com];
 ddxyz_com_tank = [ddxyz_com_tank xy_com_record];
 
 % ground reaction force optimization, only optimize to maintain z direction position and body orientation
-kp_p = diag([10 10 300]); % kp weight for COM position (x,y,z) respectively
-kd_p = diag([3 3 50]); % kd weight for COM velocity (x,y,z) respectively
+kp_p = diag([200 200 300]); % kp weight for COM position (x,y,z) respectively
+kd_p = diag([30 30 50]); % kd weight for COM velocity (x,y,z) respectively
 kp_w = diag([1300 1300 1300]); % kp weight for COM axis angle (angx,angy,angz) respectively
 kd_w = diag([100 100 100]); % kd weight for COM angular velocity (wx,wy,wz) respectively
 x_traj = Calc_x_traj(xdes,x,dT)'; % get desired COM trajectory (position and axis angle will not be directly equal to user command)
@@ -116,7 +121,7 @@ dxyz_com(1:2) = xy_com([2,4]);
 
 % For z direction, calculate desired COM linear acceleration with PD; 
 % For y and x directions, directly use acceleration from contingency MPC's output
-p_cddot = kp_p*(xyz_com-x_act) + kd_p*(dxyz_com-v_act) + ddxyz_com*4; 
+p_cddot = kp_p*(xyz_com-x_act) + kd_p*(dxyz_com-v_act); 
 
 % Calculate desired COM angular acceleration with PID
 R1 = eul2rotm([w_com(3),w_com(2),w_com(1)], 'ZYX');% rotation matrix of desired COM axis angle
