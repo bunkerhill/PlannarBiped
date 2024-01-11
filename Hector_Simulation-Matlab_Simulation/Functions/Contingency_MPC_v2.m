@@ -4,6 +4,7 @@ function u = Contingency_MPC_v2(uin)
 tic
 %% MPC Parameters
 global i_MPC_var dt_MPC_vec gait x_traj_IC I_error Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait u_zmp desire_traj global_t
+global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -49,7 +50,7 @@ dT = 0.008; % control period (every 8ms run this code once)
 L = 0.525; % the height of COM
 ddxy_s = [0;0]; % suppose the ground surface is not moving
 % if (MPC_controller.tim <= 0.2)
-%     x_z = (foot(1:2)+foot(4:5))/2;
+%     x_z = (foot(1:2)+foot(7:8))/2;
 %     gait = 0;
 %     if (MPC_controller.tim <= 0.01)
 %         u_zmp = x_z;
@@ -59,20 +60,48 @@ ddxy_s = [0;0]; % suppose the ground surface is not moving
 %     if (i_gait==0) % R stance
 %         x_z = foot(1:2);
 %     else
-%         x_z = foot(4:5);
+%         x_z = foot(7:8);
 %     end
 % end
 MPC_controller.tim
 global_t
+
+% for the beginning of stand on two feet, u_zmp is in the middle of two feet
+% if global_t==0
+%     u_zmp = (foot(1:2)+foot(7:8))/2;
+% end
+
+% get important data(predicted zmp and actual zmp)
+if (i_gait==0) % R stance
+    x_z = foot(1:2);
+else
+    x_z = foot(7:8);
+end
+% for stand on two feet, x_z is in the middle of two feet
+if global_t <= 0.2
+    x_z = (foot(1:2)+foot(7:8))/2;
+end
+u_zmp_tank = [u_zmp_tank u_zmp];
+x_z_tank = [x_z_tank x_z];
+
 u_zmp_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],u_zmp,ddxy_s);% get zmp velocity from Contingency MPC  %%% u_zmp 
 MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
-u_zmp = u_zmp + dT * u_zmp_dot; % integrate the zmp velocity from current foot location(actual foot location)  %%% x_z -> u_zmp
+u_zmp = u_zmp + dT * u_zmp_dot; % integrate the zmp velocity  %%% x_z -> u_zmp
+
+% method 1
 ddxy_com = lip_dynamics([x(4);x(5)],u_zmp,ddxy_s,L,g);% use continuous lip model to calculate COM acceleration
 ddxyz_com = [ddxy_com;0];
 
+% method 2
+xy_com = lip_dynamics_discrete([x(4);x(10);x(5);x(11)],u_zmp,ddxy_s,dT,L,g);
+
+% print
+xy_com_record = [xy_com(1);xy_com(3);xy_com(2);xy_com(4);ddxy_com];
+ddxyz_com_tank = [ddxyz_com_tank xy_com_record];
+
 % ground reaction force optimization, only optimize to maintain z direction position and body orientation
-kp_p = diag([0 0 300]); % kp weight for COM position (x,y,z) respectively
-kd_p = diag([0 0 50]); % kd weight for COM velocity (x,y,z) respectively
+kp_p = diag([10 10 300]); % kp weight for COM position (x,y,z) respectively
+kd_p = diag([3 3 50]); % kd weight for COM velocity (x,y,z) respectively
 kp_w = diag([1300 1300 1300]); % kp weight for COM axis angle (angx,angy,angz) respectively
 kd_w = diag([100 100 100]); % kd weight for COM angular velocity (wx,wy,wz) respectively
 x_traj = Calc_x_traj(xdes,x,dT)'; % get desired COM trajectory (position and axis angle will not be directly equal to user command)
@@ -81,9 +110,13 @@ xyz_com = x_traj(4:6); % COM position
 dw_com = x_traj(7:9); % COM angular velociy
 dxyz_com = x_traj(10:12); % COM velocity
 
+% modify
+xyz_com(1:2) = xy_com([1,3]);
+dxyz_com(1:2) = xy_com([2,4]);
+
 % For z direction, calculate desired COM linear acceleration with PD; 
 % For y and x directions, directly use acceleration from contingency MPC's output
-p_cddot = kp_p*(xyz_com-x_act) + kd_p*(dxyz_com-v_act) + ddxyz_com; 
+p_cddot = kp_p*(xyz_com-x_act) + kd_p*(dxyz_com-v_act) + ddxyz_com*4; 
 
 % Calculate desired COM angular acceleration with PID
 R1 = eul2rotm([w_com(3),w_com(2),w_com(1)], 'ZYX');% rotation matrix of desired COM axis angle
@@ -354,5 +387,26 @@ end
 function ddXY = lip_dynamics(X,u,ddxy_s,L,g)
 
 ddXY = g/L*(X-u)-ddxy_s;
+
+end
+
+function X_next = lip_dynamics_discrete(X,u,ddxy_s,dT,L,g)
+
+A1 = [1 dT;
+     g/L*dT 1];
+ 
+B1 = [0;
+     -dT*g/L];
+
+C1 = [0;
+     -ddxy_s(1)*dT];
+C2 = [0;
+     -ddxy_s(2)*dT];
+
+A = blkdiag(A1,A1);
+B = blkdiag(B1,B1);
+C = [C1;
+     C2];
+X_next = A*X + B*u + C;
 
 end
