@@ -82,17 +82,25 @@ end
 % get important data(predicted zmp and actual zmp)
 if (i_gait==0) % R stance
     x_z = foot(1:2);
+    current_zmp_x = foot(1);
+    current_zmp_y = foot(2);
 else
     x_z = foot(7:8);
+    current_zmp_x = foot(7);
+    current_zmp_y = foot(8);
 end
 % for stand on two feet, x_z is in the middle of two feet
 if global_t <= 0.2
     x_z = (foot(1:2)+foot(7:8))/2;
+    current_zmp_x = foot(7);
+    current_zmp_y = foot(8);
+    next_zmp_x = 
+    next_zmp_y
 end
 u_zmp_tank = [u_zmp_tank u_zmp];
 x_z_tank = [x_z_tank x_z];
 
-u_zmp_dot = MPC_controller.MPC(xy_com,u_zmp,ddxy_s,);% get zmp velocity from Contingency MPC  %%% u_zmp 
+u_zmp_dot = MPC_controller.MPC(xy_com,u_zmp,ddxy_s,current_zmp_x,current_zmp_y,next_zmp_x,next_zmp_y);% get zmp velocity from Contingency MPC  %%% u_zmp 
 MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
 u_zmp = u_zmp + dT * u_zmp_dot; % integrate the zmp position  %%% x_z -> u_zmp
 

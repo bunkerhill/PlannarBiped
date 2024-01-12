@@ -4,7 +4,7 @@ function u = Contingency_MPC_v2(uin)
 tic
 %% MPC Parameters
 global i_MPC_var dt_MPC_vec gait x_traj_IC I_error Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait u_zmp desire_traj global_t
-global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank
+global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -82,17 +82,31 @@ end
 % get important data(predicted zmp and actual zmp)
 if (i_gait==0) % R stance
     x_z = foot(1:2);
+    current_zmp_x = foot(1);
+    current_zmp_y = foot(2);
+    next_zmp_x = fx_end_L;
+    next_zmp_y = fy_end_L;
 else
     x_z = foot(7:8);
+    current_zmp_x = foot(7);
+    current_zmp_y = foot(8);
+    next_zmp_x = fx_end_R;
+    next_zmp_y = fy_end_R;
 end
-% for stand on two feet, x_z is in the middle of two feet
+
 if global_t <= 0.2
+    % for stand on two feet, x_z is in the middle of two feet
     x_z = (foot(1:2)+foot(7:8))/2;
+
+    current_zmp_x = foot(7);
+    current_zmp_y = foot(8);
+    next_zmp_x = 0.1; % need modify later
+    next_zmp_y = -0.5*0.134; % need modify later
 end
 u_zmp_tank = [u_zmp_tank u_zmp];
 x_z_tank = [x_z_tank x_z];
 
-u_zmp_dot = MPC_controller.MPC(xy_com,u_zmp,ddxy_s,next_footplacement);% get zmp velocity from Contingency MPC  %%% u_zmp 
+u_zmp_dot = MPC_controller.MPC(xy_com,u_zmp,ddxy_s,current_zmp_x,current_zmp_y,next_zmp_x,next_zmp_y);% get zmp velocity from Contingency MPC  %%% u_zmp 
 MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
 u_zmp = u_zmp + dT * u_zmp_dot; % integrate the zmp position  %%% x_z -> u_zmp
 
