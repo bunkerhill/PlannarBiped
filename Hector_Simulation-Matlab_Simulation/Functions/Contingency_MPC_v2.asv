@@ -1,9 +1,9 @@
 %% Contingency Model Predictive Control 
 
-function u = Contingency_MPC(uin)
+function u = Contingency_MPC_v2(uin)
 tic
 %% MPC Parameters
-global i_MPC_var dt_MPC_vec gait x_traj_IC Contact_Jacobian Rotm_foot addArm MPC_controller x_z xy_com xy_com_act footprint xy_com_tank desire_traj i_gait u_zmp global_t
+global i_MPC_var dt_MPC_vec gait x_traj_IC I_error Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait u_zmp desire_traj global_t
 global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
@@ -11,11 +11,11 @@ g = 9.81; % gravity
 
 %% QPOASES Parameters
 import casadi.*
-numVar = 12*h;
-numCons = 34*h;
-
+numVar = 12;
+numCons = 34;
 %% Making definition consistent with MPC
 % input definition
+%%%%%% All the variables below are in world frame %%%%%%
 xdes=uin(1:12); % desired states [eul, p, omega, v]'
 x=uin(13:24); % current states [eul, p, omega, v]'
 q=uin(25:34); % joint angles [q_L, q_R]'
@@ -37,24 +37,47 @@ R = eul2rotm(flip(eul'));
 %     end
 % end
 
-% rearrange MPC states
-xdes = [xdes;g];
-x = [x;g];
-
 %% Assigning desired trajectory for CoM and Foot locations
-if k == 1
-    x_traj = x_traj_IC
-end
-dT = 0.008;
+
+%%%%%% All the variables below are in world frame %%%%%%
+RPY=x(1:3); % Roll Pitch Yaw
+x_act=x(4:6); % CoM position (x,y,z)
+w_act=x(7:9); % Angular velocity (x,y,z)
+v_act=x(10:12); % CoM velocity (x,y,z)
+dT = 0.008; % control period (every 8ms run this code once)
 
 % contingency MPC, only care about x-y plane motion
 L = 0.525; % the height of COM
 ddxy_s = [0;0]; % suppose the ground surface is not moving
+% if (MPC_controller.tim <= 0.2)
+%     x_z = (foot(1:2)+foot(7:8))/2;
+%     gait = 0;
+%     if (MPC_controller.tim <= 0.01)
+%         u_zmp = x_z;
+%     end
+% else
+%     gait = 1;
+%     if (i_gait==0) % R stance
+%         x_z = foot(1:2);
+%     else
+%         x_z = foot(7:8);
+%     end
+% end
+MPC_controller.tim
+global_t
+
+% for the beginning of stand on two feet, u_zmp is in the middle of two feet
+% if global_t==0
+%     u_zmp = (foot(1:2)+foot(7:8))/2;
+% end
 
 % for the beginning of stand on two feet, xy_com is the same as initial actual com
 if global_t==0
     xy_com=[x(4);x(10);x(5);x(11)];
 end
+
+% use real robot states
+% xy_com=[x(4);x(10);x(5);x(11)];
 
 % get important data(predicted zmp and actual zmp)
 if (i_gait==0) % R stance
@@ -69,9 +92,9 @@ end
 u_zmp_tank = [u_zmp_tank u_zmp];
 x_z_tank = [x_z_tank x_z];
 
-u_zmp_dot = MPC_controller.MPC(xy_com,u_zmp,ddxy_s);% get zmp velocity from Contingency MPC  %%% u_zmp 
+u_zmp_dot = MPC_controller.MPC(xy_com,u_zmp,ddxy_s,);% get zmp velocity from Contingency MPC  %%% u_zmp 
 MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
-u_zmp = u_zmp + dT * u_zmp_dot; % integrate the zmp velocity  %%% x_z -> u_zmp
+u_zmp = u_zmp + dT * u_zmp_dot; % integrate the zmp position  %%% x_z -> u_zmp
 
 % method 1
 ddxy_com = lip_dynamics(xy_com([1,3]),u_zmp,ddxy_s,L,g);% use continuous lip model to calculate COM acceleration
@@ -83,21 +106,39 @@ xy_com = lip_dynamics_discrete(xy_com,u_zmp,ddxy_s,dT,L,g);
 % print
 xy_com_record = [xy_com(1);xy_com(3);xy_com(2);xy_com(4);ddxy_com];
 ddxyz_com_tank = [ddxyz_com_tank xy_com_record];
-footprint = [footprint [MPC_controller.step_size;MPC_controller.step_width]];
 
-xdes(4) = xy_com(1); %px
-xdes(5) = xy_com(3); %py
-xdes(4+6) = xy_com(2); %vx
-xdes(5+6) = xy_com(4); %vy
-% xdes(4+6) = sin(dT*100); %vx
-% xdes(5+6) = 0; %vy
-% xy_com_tank = [xy_com_tank [0;xdes(4+6);0;xdes(5+6)]];% px vx py vy
-% xy_com_act = [xy_com_act [x(4);x(10);x(5);x(11)]];% px vx py vy
-x_traj = Calc_x_traj(xdes,x,h,k); % desired trajectory
+% ground reaction force optimization, only optimize to maintain z direction position and body orientation
+kp_p = diag([250 250 300]); % kp weight for COM position (x,y,z) respectively
+kd_p = diag([40 40 50]); % kd weight for COM velocity (x,y,z) respectively
+kp_w = diag([1300 1300 1300]); % kp weight for COM axis angle (angx,angy,angz) respectively
+kd_w = diag([100 100 100]); % kd weight for COM angular velocity (wx,wy,wz) respectively
+x_traj = Calc_x_traj(xdes,x,dT)'; % get desired COM trajectory (position and axis angle will not be directly equal to user command)
+w_com = x_traj(1:3); %  COM axis angle
+xyz_com = x_traj(4:6); % COM position
+dw_com = x_traj(7:9); % COM angular velociy
+dxyz_com = x_traj(10:12); % COM velocity
+
+% modify
+xyz_com(1:2) = xy_com([1,3]);
+dxyz_com(1:2) = xy_com([2,4]);
+
+% For z direction, calculate desired COM linear acceleration with PD; 
+% For y and x directions, directly use acceleration from contingency MPC's output
+p_cddot = kp_p*(xyz_com-x_act) + kd_p*(dxyz_com-v_act); 
+
+% Calculate desired COM angular acceleration with PID
+R1 = eul2rotm([w_com(3),w_com(2),w_com(1)], 'ZYX');% rotation matrix of desired COM axis angle
+R2 = eul2rotm([RPY(3),RPY(2),RPY(1)], 'ZYX');% rotation matrix of actual COM axis angle
+R_error = R1 * R2'; % get the error of two coordinates
+axis_angle = rotm2axang(R_error); % get axis angle from actual angle to desired angle
+rpy_error = axis_angle(1:3)'*axis_angle(4); % get rotate angle from actual angle to desired angle
+I_error = I_error + rpy_error; % integrate angle error
+% I_error = [0;0;0];
+w_cddot = kp_w*rpy_error + kd_w*(dw_com-w_act) + 1.5 * I_error; % kI = 1.5
+
 foot_traj =[foot(1:3);foot(7:9)]; % assume foot under hip
-desire_traj = [desire_traj x_traj(:,1)];
-% alternatively, can use function Calc_foot_traj_3Dwalking for more
-% accurate foot position esitmate, may present some bugs for 3D locomotion
+desire_traj = [desire_traj x_traj]; % in order to plot desired trajectory
+% desire_traj = [desire_traj rpy_error];
 
 %% Robot simplified dynamics physical properties 
 mu = 0.5; %friction coefficient
@@ -123,81 +164,33 @@ R_foot_L=R_foot(4:6,:);
 
 I = R*Ib*R'; % MoI in world frame
 
-B=repmat({zeros(13,12)},h,1);
-A_hat=repmat({zeros(13,13)},h,1);
-
-% continuous A & B:
-for i = 1 : h
-Ac=[zeros(3,3), zeros(3,3), [cos(x_traj(3,i))*cos(x_traj(2,i)),-sin(x_traj(3,i)),0;sin(x_traj(3,i))*cos(x_traj(2,i)),cos(x_traj(3,i)),0;-sin(x_traj(2,i)),0,1]\eye(3), zeros(3,3), zeros(3,1);
-    zeros(3,3), zeros(3,3), zeros(3,3), eye(3), zeros(3,1);
-    zeros(3,3), zeros(3,3), zeros(3,3), zeros(3,3), zeros(3,1);
-    zeros(3,3), zeros(3,3), zeros(3,3), zeros(3,3),[0;0;-1];
-    zeros(1,13)];
-
-Bc=[zeros(3,3),zeros(3,3),zeros(3,3),zeros(3,3);
-    zeros(3,3),zeros(3,3),zeros(3,3),zeros(3,3);
-    I\skew(-x_traj(4:6,i) + foot_traj(1:3,1)), I\skew(-x_traj(4:6,i) + foot_traj(4:6,1)), I\eye(3), I\eye(3);
-    eye(3)/m, eye(3)/m, zeros(3),zeros(3);
-    zeros(1,12)];
-
-% discretization:
-B{i}=Bc*dt_MPC_vec(i+k-1);
-A_hat{i}=eye(13)+Ac*dt_MPC_vec(i+k-1);
-
-end
-
-%% QP_MPC derivation:
-% translating MPC to a condensed QP problem:
-% ref: Jerez, Juan L., Eric C. Kerrigan, and George A. Constantinides. 
-% "A condensed and sparse QP formulation for predictive control." 
-% 2011 50th IEEE Conference on Decision and Control and European Control 
-% Conference. IEEE, 2011.
-
-y = reshape(x_traj,[13*h 1]);
-Aqp=repmat({zeros(13,13)},h,1);
-%Aqp
-Aqp{1}=A_hat{1};
-for i=2:h
-    Aqp{i}=Aqp{i-1}*A_hat{i};
-end
-Aqp=cell2mat(Aqp);
-%Bqp
-Bqp=repmat({zeros(13,12)},h,h);
-for i=1:h
-    Bqp{i,i}=B{i};
-    for j=1:h-1
-        Bqp{i,j}=A_hat{i}^(i-j)*B{j};
-    end
-end
-for i=1:h-1
-    for j=i+1:h
-        Bqp{i,j}=zeros(13,12);
-    end
-end
-Bqp=cell2mat(Bqp);
-
+% continuous A & b:
+A=[eye(3), eye(3), zeros(3),zeros(3);
+    skew(-x(4:6,1) + foot_traj(1:3,1)), skew(-x(4:6,1) + foot_traj(4:6,1)), eye(3), eye(3)];
+b = [m*(p_cddot+[0;0;g]);
+    I*w_cddot];
 %% MPC Weights: (tune these according to your task)
 % state tracking objective:
-L1 = [850 600 250 ,  800 300 350 ,  1 1 1 ,  1 1 1,  0]; % [eul, p, omega, v, g]
+L = [100 0 0 0 0 0;
+     0 100 0 0 0 0;
+     0 0 130 0 0 0;
+     0 0 0 1000 0 0;
+     0 0 0 0 600 0;
+     0 0 0 0 0 600];
+W = 0.001*eye(12);
+M = 1*eye(12);  
+% L = eye(6);
 % control input minimization:
-alpha=[1 1 1, 1 1 1, 1 1 1, 1 1 1]*10^(-6); % humanoid
+% QP math:
+Hd = 2*(A'*L*A+W+M);
+fd = -2*(A'*L*b + M*last_u);  
 
-L10 = repmat(L1,1,h);
-L=diag(L10);
-alpha10 = repmat(alpha,1,h);
-K = diag(alpha10);
-% MPC->QP math:
-Hd = 2*(Bqp'*L*Bqp+K);
-fd = 2*Bqp'*L*(Aqp*x-y);  
-
-%% MPC Constraints:
-% please refer to the QPOASES constraint format: lbA <= A*u <= ubA
-A = DM(numCons,numVar); 
+%% QP Constraints:
+% please refer to the quadprog constraint format: lbA <= A*u <= ubA
 bigNum = 1e6;
 smallNum = -bigNum;
-lba = zeros(numCons,1);
-uba = lba;
-
+Ac = DM(numCons,numVar); 
+% Ac = zeros(numCons,numVar);
 %friction constraint:
 A_mu = [1,0,-mu,zeros(1,9);
     0,1,-mu,zeros(1,9); 
@@ -207,15 +200,14 @@ A_mu = [1,0,-mu,zeros(1,9);
     zeros(1,3),0,1,-mu,zeros(1,6); 
     zeros(1,3),1,0,mu,zeros(1,6); 
     zeros(1,3),0,1,mu,zeros(1,6)];
-A_mu_h = blkdiag(A_mu,A_mu,A_mu,A_mu,A_mu,A_mu,A_mu,A_mu,A_mu,A_mu);
-lba_mu = repmat([smallNum;smallNum;0;0; smallNum;smallNum;0;0],h,1);
-uba_mu = repmat([0;0;bigNum;bigNum; 0;0;bigNum;bigNum],h,1);
+
+lba_mu = [smallNum;smallNum;0;0; smallNum;smallNum;0;0];
+uba_mu = [0;0;bigNum;bigNum; 0;0;bigNum;bigNum];
 
 %force limit constraint:
 A_f = [0,0,1,zeros(1,9); zeros(1,3),0,0,1,zeros(1,6)];
-A_f_h = blkdiag(A_f,A_f,A_f,A_f,A_f,A_f,A_f,A_f,A_f,A_f);
-lba_force = repmat([Fmin; Fmin],h,1); 
-uba_force = repmat([Fmax; Fmax],h,1);
+lba_force = [Fmin; Fmin]; 
+uba_force = [Fmax; Fmax];
 
 % Line foot constraints :
 % ref: Ding, Yanran, et al. "Orientation-Aware Model Predictive Control 
@@ -235,40 +227,47 @@ A_LF2 = 1*[ [0, lt, -mu*lt]*R_foot_R', zeros(1,3), [0, -mu, -1]*R_foot_R', zeros
     zeros(1,3), [0, lh, -mu*lh]*R_foot_L', zeros(1,3), [0, mu, 1]*R_foot_L';
     [0, -lh, -mu*lh]*R_foot_R', zeros(1,3), [0, mu, -1]*R_foot_R', zeros(1,3);
     zeros(1,3), [0, -lh, -mu*lh]*R_foot_L', zeros(1,3), [0, mu, -1]*R_foot_L'];
-uba_LF = repmat(zeros(12,1),h,1); 
-lba_LF = repmat(ones(12,1)*smallNum,h,1);
+uba_LF = zeros(12,1); 
+lba_LF = ones(12,1)*smallNum;
 A_LF = [A_LF1;A_LF2]; 
-A_LF_h = blkdiag(A_LF,A_LF,A_LF,A_LF,A_LF,A_LF,A_LF,A_LF,A_LF,A_LF);
-
 % motor torque limit
 A_tau = contact_mapping;
-A_tau_h = blkdiag(A_tau,A_tau,A_tau,A_tau,A_tau,A_tau,A_tau,A_tau,A_tau,A_tau);
 % gait are implemented here to zero out the swing leg control inputs
 if gait == 1
-    gaitm = gaitSchedule(k, 1);
+    gaitm = gaitSchedule(i_gait);
 elseif gait == 0
-    gaitm = ones(10*h,1);
+    gaitm = ones(10,1);
 end
-uba_tau = repmat([33.5;33.5;50;50;33.5;33.5;33.5;50;50;33.5],h,1).*gaitm;
+uba_tau = [33.5;33.5;50;50;33.5;33.5;33.5;50;50;33.5].*gaitm;
 lba_tau = -uba_tau.*gaitm;
 
 % foot moment Mx=0: 
 Moment_selection=[1,0,0];
 A_M = [zeros(1,3),zeros(1,3),Moment_selection*R_foot_R',zeros(1,3);
     zeros(1,3),zeros(1,3),zeros(1,3),Moment_selection*R_foot_L'];
-A_M_h = blkdiag(A_M,A_M,A_M,A_M,A_M,A_M,A_M,A_M,A_M,A_M);
-uba_M = zeros(2*h,1);
+
+uba_M = zeros(2,1);
 lba_M = uba_M;
 
 % Constraint Aggregation:
-A(1:80,:) = A_mu_h; % row 1-80
-A(81:100,:) = A_f_h; % row 81-100
-A(101:220,:) = A_LF_h; % row 101-220
-A(221:320,:) = A_tau_h; % row 221-320
-A(321:340,:) = A_M_h; % row 321-340
+Ac(1:8,:) = A_mu; % row 1-80
+Ac(9:10,:) = A_f; % row 81-100
+Ac(11:22,:) = A_LF; % row 101-220
+Ac(23:32,:) = A_tau; % row 221-320
+Ac(33:34,:) = A_M; % row 321-340
 
 lba = [lba_mu; lba_force; lba_LF; lba_tau; lba_M];
 uba = [uba_mu; uba_force; uba_LF; uba_tau; uba_M];
+
+%% quadprog
+% A = [Ac;-Ac];
+% b = [uba;-lba];
+% 
+% options = optimset('Algorithm','interior-point-convex','Display','off');
+% [u,~,exitflag,~] = quadprog(Hd,fd,A,b,[],[],[],[],[],options);
+% if exitflag == -2
+%    fprintf("---SOLUTION NOT FOUND---");
+% end
 
 %% QPOASES setup:
 Hsize = size(Hd);
@@ -280,30 +279,34 @@ g = DM(fd);
 
 qp = struct;
 qp.h = H.sparsity();
-qp.a = A.sparsity();
+qp.a = Ac.sparsity();
 % qp.setOptions( setToReliable() );
 % print_options()
 opts = struct('enableEqualities', 1, 'printLevel', 'low',...
     'enableFullLITests',0);
 S = conic('S','qpoases',qp,opts);
 % disp(S)
-r = S('h', H, 'g', g, 'a', A, 'lba',lba, 'uba', uba);
+r = S('h', H, 'g', g, 'a', Ac, 'lba',lba, 'uba', uba);
 
 % solve!:
-tic
+% tic
 x_opt = r.x;
 % disp(x_opt(1:12));
-disp(' ');
-disp(['MPC Time Step:',num2str(k)]);
-disp('QPOASES-MPC Solve Time:');
-toc
+% disp(' ');
+% disp(['MPC Time Step:',num2str(k)]);
+% disp('QPOASES-MPC Solve Time:');
+% toc
 
 GRFM = full(x_opt);
 GRFM = GRFM(1:12);
 % u=-contact_mapping*GRFM(1:12); 
 u=[GRFM(1:12)];
-disp('QPOASES-MPC Function Total Time:');
-toc
+
+% disp('QPOASES-MPC Function Total Time:');
+% toc
+last_u = u;
+
+
 end
 
 
@@ -358,40 +361,31 @@ end
 end
 
 
-function x_traj = Calc_x_traj(xdes,x,h,k)
-global dt_MPC_vec 
- for i = 0:h-1
-     for j = 1:6
-         if xdes(6+j) == 0 % if velocity is zero, then position use desired position
-             x_traj(j,i+1) = xdes(j) + xdes(6+j)*sum(dt_MPC_vec(k:k+i));
-         else
-             % if velocity is not zero, then position use current position
-             % plus vt
-             x_traj(j,i+1) = xdes(j) + xdes(6+j)*sum(dt_MPC_vec(k:k+i));
-         end
-         x_traj(6+j,i+1) = xdes(6+j);
+function x_traj = Calc_x_traj(xdes,x,dt)
+
+for j = 1:6
+     if xdes(6+j) == 0 % if velocity is zero, then position use desired position
+         x_traj(j) = xdes(j) + xdes(6+j)*dt;
+     else % if velocity is not zero, then position use current position
+         x_traj(j) = x(j) + xdes(6+j)*dt;
      end
-         x_traj(13,i+1) = xdes(13);
- end
+     x_traj(6+j) = xdes(6+j);
 end
 
-function gaitm = gaitSchedule(i, gait)
-h = 10;
-k = rem(i,h);
-if k == 0; k = 10; end
+end
+
+function gaitm = gaitSchedule(i)
+
 % walking 
-Rm = [0;0;0;0;0; 1;1;1;1;1];
-Lm = [1;1;1;1;1; 0;0;0;0;0];
+Lm = [0;0;0;0;0; 1;1;1;1;1];
+Rm = [1;1;1;1;1; 0;0;0;0;0];
 
-j = [2-k,3-k,4-k,5-k,6-k,...
-    7-k,8-k,9-k,10-k,11-k];
-j(j<=0) = j(j<=0)+h;
+if(i==0) % R stance
+    gaitm = Rm;
+else
+    gaitm = Lm;
+end
 
-IOI{j(1)} =  Rm; IOI{j(2)} =  Rm; IOI{j(3)} =  Rm; IOI{j(4)} =  Rm; IOI{j(5)} =  Rm;
-IOI{j(6)} =  Lm; IOI{j(7)} =  Lm; IOI{j(8)} =  Lm; IOI{j(9)} =  Lm; IOI{j(10)} = Lm;
-
-gaitm = ...%gait matrix for 10 horizons;
-    vertcat(IOI{1},IOI{2},IOI{3},IOI{4},IOI{5},IOI{6},IOI{7},IOI{8},IOI{9},IOI{10});
 end
 
 function A= skew(v)

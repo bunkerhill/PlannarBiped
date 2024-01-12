@@ -35,12 +35,9 @@ classdef ACC_MPC
         tim
 
         distime
-
-        % foot placement
-        next_zmp_x
-        next_zmp_y
-        current_zmp_x
-        current_zmp_y
+        %
+        x_bias
+        y_bias
         
     end
 
@@ -59,10 +56,8 @@ classdef ACC_MPC
             obj.gait_time = obj.single_support_time + obj.double_support_time;
             obj.tim = 0;
             obj.distime = 0.2;
-            obj.next_zmp_x = 0;
-            obj.next_zmp_y = 0;
-            obj.current_zmp_x = 0;
-            obj.current_zmp_y = 0;
+            obj.x_bias = 0;
+            obj.y_bias = 0;
             
         end
         
@@ -71,13 +66,8 @@ classdef ACC_MPC
             obj.step_width = step_width;
         end
         % solve the mpc problem
-        function pz_dot = MPC(obj,x,p_z,ddxy_s,current_zmp_x,current_zmp_y,next_zmp_x,next_zmp_y)
+        function pz_dot = MPC(obj,x,p_z,ddxy_s)
             
-            obj.next_zmp_x = next_zmp_x;
-            obj.next_zmp_y = next_zmp_y;
-            obj.current_zmp_x = current_zmp_x;
-            obj.current_zmp_y = current_zmp_y;
-
             vector_length = round(obj.T_h/obj.deta);
 
             % objective function
@@ -147,8 +137,8 @@ classdef ACC_MPC
             % start in double support
             timer = obj.distime;
             if current_T < timer
-                x_min_next = obj.current_zmp_x - 0.5 * obj.foot_length;
-                x_max_next = obj.current_zmp_x + 0.5 * obj.foot_length;
+                x_min_next = - 0.5 * obj.foot_length;
+                x_max_next = 0.5 * obj.foot_length;
 
             else
                 current_T = current_T - timer;
@@ -157,16 +147,8 @@ classdef ACC_MPC
                 temp1 = floor(count/one_gait_num);
                 temp2 = mod(count,one_gait_num);
                 if temp2 < round(obj.single_support_time/obj.deta)
-                    if temp1 == 0
-                        x_min_next = obj.current_zmp_x + temp1 * obj.step_size - 0.5 * obj.foot_length;
-                        x_max_next = obj.current_zmp_x + temp1 * obj.step_size + 0.5 * obj.foot_length; 
-                    elseif temp1 == 1
-                        x_min_next = obj.next_zmp_x + (temp1 - 1) * obj.step_size - 0.5 * obj.foot_length;
-                        x_max_next = obj.next_zmp_x + (temp1 - 1) * obj.step_size + 0.5 * obj.foot_length;
-                    else
-                        x_min_next = obj.next_zmp_x + (temp1 - 1) * obj.step_size - 0.5 * obj.foot_length;
-                        x_max_next = obj.next_zmp_x + (temp1 - 1) * obj.step_size + 0.5 * obj.foot_length;
-                    end
+                    x_min_next = temp1 * obj.step_size - 0.5 * obj.foot_length;
+                    x_max_next = temp1 * obj.step_size + 0.5 * obj.foot_length;
                 else
                     x_min_next = temp1 * obj.step_size - 0.5 * obj.foot_length;
                     x_max_next = (temp1+1) * obj.step_size + 0.5 * obj.foot_length;
@@ -189,8 +171,8 @@ classdef ACC_MPC
              % start in double support
             timer = obj.distime;
             if current_T < timer
-                y_min_next =  - 0.5 * obj.step_width - 0.5 * obj.foot_width;
-                y_max_next =  0.5 * obj.step_width + 0.5 * obj.foot_width;
+                y_min_next = -0.5 * obj.step_width - 0.5 * obj.foot_width;
+                y_max_next = 0.5 * obj.step_width + 0.5 * obj.foot_width;
             else
                 current_T = current_T - timer;
                 one_gait_num = round(obj.gait_time/obj.deta);
@@ -198,16 +180,8 @@ classdef ACC_MPC
                 temp1 = floor(count/one_gait_num);
                 temp2 = mod(count,one_gait_num);
                 if temp2 < round(obj.single_support_time/obj.deta)
-                    if temp1 == 0
-                        y_min_next = (-1)^temp1 * 0.5 * obj.step_width - 0.5 * obj.foot_width;
-                        y_max_next = (-1)^temp1 * 0.5 * obj.step_width + 0.5 * obj.foot_width;
-                    elseif temp1 == 1
-                        y_min_next = (-1)^temp1 * 0.5 * obj.step_width - 0.5 * obj.foot_width;
-                        y_max_next = (-1)^temp1 * 0.5 * obj.step_width + 0.5 * obj.foot_width;
-                    else
-                        y_min_next = (-1)^temp1 * 0.5 * obj.step_width - 0.5 * obj.foot_width;
-                        y_max_next = (-1)^temp1 * 0.5 * obj.step_width + 0.5 * obj.foot_width;
-                    end
+                    y_min_next = (-1)^temp1 * 0.5 * obj.step_width - 0.5 * obj.foot_width;
+                    y_max_next = (-1)^temp1 * 0.5 * obj.step_width + 0.5 * obj.foot_width;
                 else
                     y_min_next = -0.5 * obj.step_width - 0.5 * obj.foot_width;
                     y_max_next = 0.5 * obj.step_width + 0.5 * obj.foot_width;

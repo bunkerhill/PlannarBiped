@@ -76,6 +76,9 @@ if global_t==0
     xy_com=[x(4);x(10);x(5);x(11)];
 end
 
+% use real robot states
+% xy_com=[x(4);x(10);x(5);x(11)];
+
 % get important data(predicted zmp and actual zmp)
 if (i_gait==0) % R stance
     x_z = foot(1:2);
@@ -89,9 +92,9 @@ end
 u_zmp_tank = [u_zmp_tank u_zmp];
 x_z_tank = [x_z_tank x_z];
 
-u_zmp_dot = MPC_controller.MPC(xy_com,u_zmp,ddxy_s);% get zmp velocity from Contingency MPC  %%% u_zmp 
+u_zmp_dot = MPC_controller.MPC(xy_com,u_zmp,ddxy_s,next_footplacement);% get zmp velocity from Contingency MPC  %%% u_zmp 
 MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
-u_zmp = u_zmp + dT * u_zmp_dot; % integrate the zmp velocity  %%% x_z -> u_zmp
+u_zmp = u_zmp + dT * u_zmp_dot; % integrate the zmp position  %%% x_z -> u_zmp
 
 % method 1
 ddxy_com = lip_dynamics(xy_com([1,3]),u_zmp,ddxy_s,L,g);% use continuous lip model to calculate COM acceleration

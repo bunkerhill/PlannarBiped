@@ -35,17 +35,17 @@ x_z = [0;0];
 u_tank = [0;0];
 
 % moving surface
-% Ax = 0.005;
-% T_periodx = 0.6;
-% Ay = 0.02;
-% T_periody = 0.6;
-% 
-% ddxy_s = [0;0];
-% ddxy_s_tank = [0;0];
-% dxy_s = [Ax*2*pi/T_periodx;Ay*2*pi/T_periody];
-% dxy_s_tank = [Ax*2*pi/T_periodx;Ay*2*pi/T_periody];
-% xy_s = [0;0];
-% xy_s_tank = [0;0];
+Ax = 0.005;
+T_periodx = 0.6;
+Ay = 0.02;
+T_periody = 0.6;
+
+ddxy_s = [0;0];
+ddxy_s_tank = [0;0];
+dxy_s = [Ax*2*pi/T_periodx;Ay*2*pi/T_periody];
+dxy_s_tank = [Ax*2*pi/T_periodx;Ay*2*pi/T_periody];
+xy_s = [0;0];
+xy_s_tank = [0;0];
 
 ddxy_s = [0;0];
 ddxy_s_tank = [0;0];
@@ -61,25 +61,25 @@ for i=2:length(T)
     fprintf("%d\n",i);
     current_T = T(i-1);
     if i >= 30
-%         ddxy_s = [-Ax*2*pi/T_periodx*2*pi/T_periodx*sin((current_T-T(41))*2*pi/T_periodx);
-%                   -Ay*2*pi/T_periody*2*pi/T_periody*sin((current_T-T(41))*2*pi/T_periody)];
-% 
-%         dxy_s = dxy_s + ddxy_s * dT;
-%         xy_s = xy_s + dxy_s * dT;
-%     
-%         ddxy_s_tank = [ddxy_s_tank,ddxy_s];
-%         dxy_s_tank = [dxy_s_tank,dxy_s];
-%         xy_s_tank = [xy_s_tank,xy_s];
+        ddxy_s = [-Ax*2*pi/T_periodx*2*pi/T_periodx*sin((current_T-T(41))*2*pi/T_periodx);
+                  -Ay*2*pi/T_periody*2*pi/T_periody*sin((current_T-T(41))*2*pi/T_periody)];
 
-        ddxy_s = random(:,i-1); % 0.56  0.58
-        if abs(ddxy_s(1) - last_acc(1)) > 0.5
-            ddxy_s(1) = last_acc(1) + sign((ddxy_s(1) - last_acc(1)))*0.5;
-        end
+        dxy_s = dxy_s + ddxy_s * dT;
+        xy_s = xy_s + dxy_s * dT;
 
-        if abs(ddxy_s(2) - last_acc(2)) > 0.5
-            ddxy_s(2) = last_acc(2) + sign((ddxy_s(2) - last_acc(2)))*0.5;
-        end
-        last_acc = ddxy_s;
+        ddxy_s_tank = [ddxy_s_tank,ddxy_s];
+        dxy_s_tank = [dxy_s_tank,dxy_s];
+        xy_s_tank = [xy_s_tank,xy_s];
+
+        % ddxy_s = random(:,i-1); % 0.56  0.58
+        % if abs(ddxy_s(1) - last_acc(1)) > 0.5
+        %     ddxy_s(1) = last_acc(1) + sign((ddxy_s(1) - last_acc(1)))*0.5;
+        % end
+        % 
+        % if abs(ddxy_s(2) - last_acc(2)) > 0.5
+        %     ddxy_s(2) = last_acc(2) + sign((ddxy_s(2) - last_acc(2)))*0.5;
+        % end
+        % last_acc = ddxy_s;
     else
         ddxy_s = [0;0];
     end
