@@ -107,8 +107,13 @@ classdef ACC_MPC
             A1 = [P;
                   -P];
             A = blkdiag(A1,A1);
+            % latest
             [X_min,X_max] = ZMP_rangex(obj,obj.tim);
             [Y_min,Y_max] = ZMP_rangey(obj,obj.tim);
+            % before
+            % [X_min,X_max] = ZMP_rangex1(obj,obj.tim);
+            % [Y_min,Y_max] = ZMP_rangey1(obj,obj.tim);
+
             b = [X_max-p*p_z(1);
                  -(X_min-p*p_z(1));
                  Y_max-p*p_z(2);
@@ -129,6 +134,73 @@ classdef ACC_MPC
 
         function obj = updatetime(obj,dt)
             obj.tim = obj.tim + dt;
+        end
+        % Generate ZMP range
+        function [X_min_next,X_max_next] = ZMP_rangex1(obj,current_T)
+
+            vector_length = round(obj.T_h/obj.deta);
+            X_min_next = zeros(vector_length,1);
+            X_max_next = zeros(vector_length,1);
+            for i = 1:vector_length
+                [X_min_next(i),X_max_next(i)] = one_ZMP_rangex1(obj,current_T + (i-1)*obj.deta);
+            end
+
+        end
+
+        function [x_min_next,x_max_next] = one_ZMP_rangex1(obj,current_T)
+            % start in double support
+            timer = obj.distime;
+            if current_T < timer
+                x_min_next = - 0.5 * obj.foot_length;
+                x_max_next = 0.5 * obj.foot_length;
+
+            else
+                current_T = current_T - timer;
+                one_gait_num = round(obj.gait_time/obj.deta);
+                count = round(current_T/obj.deta);
+                temp1 = floor(count/one_gait_num);
+                temp2 = mod(count,one_gait_num);
+                if temp2 < round(obj.single_support_time/obj.deta)
+                    x_min_next = temp1 * obj.step_size - 0.5 * obj.foot_length;
+                    x_max_next = temp1 * obj.step_size + 0.5 * obj.foot_length;
+                else
+                    x_min_next = temp1 * obj.step_size - 0.5 * obj.foot_length;
+                    x_max_next = (temp1+1) * obj.step_size + 0.5 * obj.foot_length;
+                end
+            end
+        end
+
+        function [Y_min_next,Y_max_next] = ZMP_rangey1(obj,current_T)
+
+            vector_length = round(obj.T_h/obj.deta);
+            Y_min_next = zeros(vector_length,1);
+            Y_max_next = zeros(vector_length,1);
+            for i = 1:vector_length
+                [Y_min_next(i),Y_max_next(i)] = one_ZMP_rangey1(obj,current_T + (i-1)*obj.deta);
+            end
+
+        end
+
+        function [y_min_next,y_max_next] = one_ZMP_rangey1(obj,current_T)
+             % start in double support
+            timer = obj.distime;
+            if current_T < timer
+                y_min_next = -0.5 * obj.step_width - 0.5 * obj.foot_width;
+                y_max_next = 0.5 * obj.step_width + 0.5 * obj.foot_width;
+            else
+                current_T = current_T - timer;
+                one_gait_num = round(obj.gait_time/obj.deta);
+                count = round(current_T/obj.deta);
+                temp1 = floor(count/one_gait_num);
+                temp2 = mod(count,one_gait_num);
+                if temp2 < round(obj.single_support_time/obj.deta)
+                    y_min_next = (-1)^temp1 * 0.5 * obj.step_width - 0.5 * obj.foot_width;
+                    y_max_next = (-1)^temp1 * 0.5 * obj.step_width + 0.5 * obj.foot_width;
+                else
+                    y_min_next = -0.5 * obj.step_width - 0.5 * obj.foot_width;
+                    y_max_next = 0.5 * obj.step_width + 0.5 * obj.foot_width;
+                end
+            end
         end
 
         % Generate ZMP range

@@ -77,7 +77,7 @@ if global_t==0
 end
 
 % use real robot states
-% xy_com=[x(4);x(10);x(5);x(11)];
+xy_com=[x(4);x(10);x(5);x(11)];
 
 % get important data(predicted zmp and actual zmp)
 if (i_gait==0) % R stance
@@ -86,6 +86,7 @@ if (i_gait==0) % R stance
     current_zmp_y = foot(2);
     next_zmp_x = fx_end_L;
     next_zmp_y = fy_end_L;
+    % xy_com=[x(4);x(10);x(5);x(11)];
 else
     x_z = foot(7:8);
     current_zmp_x = foot(7);
