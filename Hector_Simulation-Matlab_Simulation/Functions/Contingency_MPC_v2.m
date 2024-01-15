@@ -74,6 +74,7 @@ global_t
 % for the beginning of stand on two feet, xy_com is the same as initial actual com
 if global_t==0
     xy_com=[x(4);x(10);x(5);x(11)];
+    u_zmp = (foot(1:2)+foot(7:8))/2;
 end
 
 % use real robot states

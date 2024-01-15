@@ -43,7 +43,7 @@ for i=2:length(T)
     fprintf("%d\n",i);
     current_T = T(i-1);
 
-    x_z_dot = MPC_controller1.MPC(x_tank(:,i-1),x_z,ddxy_s);
+    x_z_dot = MPC_controller1.MPC(x_tank(:,i-1),x_z,ddxy_s,0,0,0,0);
     MPC_controller1 = MPC_controller1.updatetime(dT);
     x_z = x_z + dT * x_z_dot;
     u_tank = [u_tank, x_z];
@@ -106,29 +106,29 @@ end
 % xlabel('t (s)') 
 % ylabel('a (m/s^2)') 
 
-figure
-plot(T,dxy_s_tank(1,:))
-title('moving surface x direction velocity')
-xlabel('t (s)') 
-ylabel('v (m/s)') 
-
-figure
-plot(T,ddxy_s_tank(1,:))
-title('moving surface x direction acceleration')
-xlabel('t (s)') 
-ylabel('a (m/s^2)') 
-
-figure
-plot(T,dxy_s_tank(2,:))
-title('moving surface y direction velocity')
-xlabel('t (s)') 
-ylabel('v (m/s)') 
-
-figure
-plot(T,ddxy_s_tank(2,:))
-title('moving surface y direction acceleration')
-xlabel('t (s)') 
-ylabel('a (m/s^2)') 
+% figure
+% plot(T,dxy_s_tank(1,:))
+% title('moving surface x direction velocity')
+% xlabel('t (s)') 
+% ylabel('v (m/s)') 
+% 
+% figure
+% plot(T,ddxy_s_tank(1,:))
+% title('moving surface x direction acceleration')
+% xlabel('t (s)') 
+% ylabel('a (m/s^2)') 
+% 
+% figure
+% plot(T,dxy_s_tank(2,:))
+% title('moving surface y direction velocity')
+% xlabel('t (s)') 
+% ylabel('v (m/s)') 
+% 
+% figure
+% plot(T,ddxy_s_tank(2,:))
+% title('moving surface y direction acceleration')
+% xlabel('t (s)') 
+% ylabel('a (m/s^2)') 
 
 figure
 plot(T,x_tank(1,:))
