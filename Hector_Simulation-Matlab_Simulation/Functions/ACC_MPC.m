@@ -108,11 +108,11 @@ classdef ACC_MPC
                   -P];
             A = blkdiag(A1,A1);
             % latest
-            % [X_min,X_max] = ZMP_rangex(obj,obj.tim);
-            % [Y_min,Y_max] = ZMP_rangey(obj,obj.tim);
+            [X_min,X_max] = ZMP_rangex(obj,obj.tim);
+            [Y_min,Y_max] = ZMP_rangey(obj,obj.tim);
             % before
-            [X_min,X_max] = ZMP_rangex1(obj,obj.tim);
-            [Y_min,Y_max] = ZMP_rangey1(obj,obj.tim);
+            % [X_min,X_max] = ZMP_rangex1(obj,obj.tim);
+            % [Y_min,Y_max] = ZMP_rangey1(obj,obj.tim);
 
             b = [X_max-p*p_z(1);
                  -(X_min-p*p_z(1));

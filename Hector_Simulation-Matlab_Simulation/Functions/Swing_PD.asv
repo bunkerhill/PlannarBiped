@@ -6,7 +6,7 @@ function tau=Swing_PD(uin)
 %test=test+1 % check this output to locate break point
 
 global  dt_MPC gait i_gait acc_t i_MPC_var dt_MPC_vec stand_position current_height MPC_controller
-glo
+global fx_end_R fx_end_L fy_end_R fy_end_L
 t=uin(1);
 if t < 0.2
     t = 0;

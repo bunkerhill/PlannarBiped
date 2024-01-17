@@ -4,7 +4,7 @@ function u = Contingency_MPC_v2(uin)
 tic
 %% MPC Parameters
 global i_MPC_var dt_MPC_vec gait x_traj_IC I_error Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait u_zmp desire_traj global_t
-global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank
+global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L last_point
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -74,28 +74,42 @@ global_t
 % for the beginning of stand on two feet, xy_com is the same as initial actual com
 if global_t==0
     xy_com=[x(4);x(10);x(5);x(11)];
+    u_zmp = (foot(1:2)+foot(7:8))/2;
 end
 
 % use real robot states
 % xy_com=[x(4);x(10);x(5);x(11)];
+
+% fresh to current com at a certain period time
+if rem(k,10) ~= last_point && 
+    xy_com=[x(4);x(10);x(5);x(11)]
+end
+last_point = rem(k,10);
 
 % get important data(predicted zmp and actual zmp)
 if (i_gait==0) % R stance
     x_z = foot(1:2);
     current_zmp_x = foot(1);
     current_zmp_y = foot(2);
+    next_zmp_x = fx_end_L;
+    next_zmp_y = fy_end_L;
+    % xy_com=[x(4);x(10);x(5);x(11)];
 else
     x_z = foot(7:8);
     current_zmp_x = foot(7);
     current_zmp_y = foot(8);
+    next_zmp_x = fx_end_R;
+    next_zmp_y = fy_end_R;
 end
-% for stand on two feet, x_z is in the middle of two feet
+
 if global_t <= 0.2
+    % for stand on two feet, x_z is in the middle of two feet
     x_z = (foot(1:2)+foot(7:8))/2;
+
     current_zmp_x = foot(7);
     current_zmp_y = foot(8);
-    next_zmp_x = 
-    next_zmp_y
+    next_zmp_x = 0.1; % need modify later
+    next_zmp_y = -0.5*0.134; % need modify later
 end
 u_zmp_tank = [u_zmp_tank u_zmp];
 x_z_tank = [x_z_tank x_z];

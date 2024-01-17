@@ -32,7 +32,6 @@ fx_end_R = 0;
 fx_end_L = 0;
 fy_end_R = 0;
 fy_end_L = 0;
-last_point = 0;
 %% General (sim world physics)
 world_damping = 1e-3;
 world_rot_damping = 1e-3;

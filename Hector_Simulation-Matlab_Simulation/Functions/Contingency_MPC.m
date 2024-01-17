@@ -4,7 +4,7 @@ function u = Contingency_MPC(uin)
 tic
 %% MPC Parameters
 global i_MPC_var dt_MPC_vec gait x_traj_IC Contact_Jacobian Rotm_foot addArm MPC_controller x_z xy_com xy_com_act footprint xy_com_tank desire_traj i_gait u_zmp global_t
-global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank
+global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L last_point
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -54,24 +54,49 @@ ddxy_s = [0;0]; % suppose the ground surface is not moving
 % for the beginning of stand on two feet, xy_com is the same as initial actual com
 if global_t==0
     xy_com=[x(4);x(10);x(5);x(11)];
+    u_zmp = (foot(1:2)+foot(7:8))/2;
 end
+
+% use real robot states
+% xy_com=[x(4);x(10);x(5);x(11)];
+
+% fresh to current com at a certain period time
+if rem(k,3) ~= last_point && last_point == 0
+    xy_com=[x(4);x(10);x(5);x(11)]
+end
+last_point = rem(k,3);
 
 % get important data(predicted zmp and actual zmp)
 if (i_gait==0) % R stance
     x_z = foot(1:2);
+    current_zmp_x = foot(1);
+    current_zmp_y = foot(2);
+    next_zmp_x = fx_end_L;
+    next_zmp_y = fy_end_L;
+    % xy_com=[x(4);x(10);x(5);x(11)];
 else
     x_z = foot(7:8);
+    current_zmp_x = foot(7);
+    current_zmp_y = foot(8);
+    next_zmp_x = fx_end_R;
+    next_zmp_y = fy_end_R;
 end
-% for stand on two feet, x_z is in the middle of two feet
+
 if global_t <= 0.2
+    % for stand on two feet, x_z is in the middle of two feet
     x_z = (foot(1:2)+foot(7:8))/2;
+
+    current_zmp_x = foot(7);
+    current_zmp_y = foot(8);
+    next_zmp_x = 0.1; % need modify later
+    next_zmp_y = -0.5*0.134; % need modify later
 end
 u_zmp_tank = [u_zmp_tank u_zmp];
 x_z_tank = [x_z_tank x_z];
 
-u_zmp_dot = MPC_controller.MPC(xy_com,u_zmp,ddxy_s);% get zmp velocity from Contingency MPC  %%% u_zmp 
+u_zmp_dot = MPC_controller.MPC(xy_com,u_zmp,ddxy_s,current_zmp_x,current_zmp_y,next_zmp_x,next_zmp_y);% get zmp velocity from Contingency MPC  %%% u_zmp 
 MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
-u_zmp = u_zmp + dT * u_zmp_dot; % integrate the zmp velocity  %%% x_z -> u_zmp
+u_zmp = u_zmp + dT * u_zmp_dot; % integrate the zmp position  %%% x_z -> u_zmp
 
 % method 1
 ddxy_com = lip_dynamics(xy_com([1,3]),u_zmp,ddxy_s,L,g);% use continuous lip model to calculate COM acceleration
@@ -367,7 +392,7 @@ global dt_MPC_vec
          else
              % if velocity is not zero, then position use current position
              % plus vt
-             x_traj(j,i+1) = xdes(j) + xdes(6+j)*sum(dt_MPC_vec(k:k+i));
+             x_traj(j,i+1) = x(j) + xdes(6+j)*sum(dt_MPC_vec(k:k+i));
          end
          x_traj(6+j,i+1) = xdes(6+j);
      end

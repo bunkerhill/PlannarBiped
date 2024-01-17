@@ -3,7 +3,8 @@
 function u = Contingency_MPC(uin)
 tic
 %% MPC Parameters
-global i_MPC_var dt_MPC_vec gait x_traj_IC Contact_Jacobian Rotm_foot addArm MPC_controller x_z xy_com xy_com_act footprint xy_com_tank
+global i_MPC_var dt_MPC_vec gait x_traj_IC Contact_Jacobian Rotm_foot addArm MPC_controller x_z xy_com xy_com_act footprint xy_com_tank desire_traj i_gait u_zmp global_t
+global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L last_point
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -25,16 +26,16 @@ eul_des = xdes(1:3);
 R = eul2rotm(flip(eul'));
 
 % enforce "2*pi=0" relation for turning
-yaw_correction=0;
-while yaw_correction==0
-    if eul_des(3,1)-eul(3,1)>pi
-        eul(3,1)=eul(3,1)+2*pi;
-    elseif eul_des(3,1)-eul(3,1)<-pi
-        eul(3,1)=eul(3,1)-2*pi;
-    else
-        yaw_correction=1;
-    end
-end
+% yaw_correction=0;
+% while yaw_correction==0
+%     if eul_des(3,1)-eul(3,1)>pi
+%         eul(3,1)=eul(3,1)+2*pi;
+%     elseif eul_des(3,1)-eul(3,1)<-pi
+%         eul(3,1)=eul(3,1)-2*pi;
+%     else
+%         yaw_correction=1;
+%     end
+% end
 
 % rearrange MPC states
 xdes = [xdes;g];
@@ -45,25 +46,81 @@ if k == 1
     x_traj = x_traj_IC
 end
 dT = 0.008;
-L = 0.525;
-ddxy_s = [0;0];
-% x_z_dot = MPC_controller.MPC([x(4);x(10);x(5);x(11)],x_z,ddxy_s);
-% MPC_controller = MPC_controller.updatetime();
-% 
-% x_z = x_z + dT * x_z_dot;
-% xy_com = lip_dynamics([x(4);x(10);x(5);x(11)],x_z,ddxy_s,dT,L,g);
-% % [x(10);x(11)]
-% xy_com_act = [xy_com_act [x(4);x(10);x(5);x(11)]];% px vx py vy
+
+% contingency MPC, only care about x-y plane motion
+L = 0.525; % the height of COM
+ddxy_s = [0;0]; % suppose the ground surface is not moving
+
+% for the beginning of stand on two feet, xy_com is the same as initial actual com
+if global_t==0
+    xy_com=[x(4);x(10);x(5);x(11)];
+    u_zmp = (foot(1:2)+foot(7:8))/2;
+end
+
+% use real robot states
+% xy_com=[x(4);x(10);x(5);x(11)];
+
+% fresh to current com at a certain period time
+if rem(k,3) ~= last_point && last_point == 0
+    xy_com=[x(4);x(10);x(5);x(11)]
+end
+last_point = rem(k,3);
+
+% get important data(predicted zmp and actual zmp)
+if (i_gait==0) % R stance
+    x_z = foot(1:2);
+    current_zmp_x = foot(1);
+    current_zmp_y = foot(2);
+    next_zmp_x = fx_end_L;
+    next_zmp_y = fy_end_L;
+    % xy_com=[x(4);x(10);x(5);x(11)];
+else
+    x_z = foot(7:8);
+    current_zmp_x = foot(7);
+    current_zmp_y = foot(8);
+    next_zmp_x = fx_end_R;
+    next_zmp_y = fy_end_R;
+end
+
+if global_t <= 0.2
+    % for stand on two feet, x_z is in the middle of two feet
+    x_z = (foot(1:2)+foot(7:8))/2;
+
+    current_zmp_x = foot(7);
+    current_zmp_y = foot(8);
+    next_zmp_x = 0.1; % need modify later
+    next_zmp_y = -0.5*0.134; % need modify later
+end
+u_zmp_tank = [u_zmp_tank u_zmp];
+x_z_tank = [x_z_tank x_z];
+
+u_zmp_dot = MPC_controller.MPC(xy_com,u_zmp,ddxy_s,current_zmp_x,current_zmp_y,next_zmp_x,next_zmp_y);% get zmp velocity from Contingency MPC  %%% u_zmp 
+MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
+u_zmp = u_zmp + dT * u_zmp_dot; % integrate the zmp position  %%% x_z -> u_zmp
+
+% method 1
+ddxy_com = lip_dynamics(xy_com([1,3]),u_zmp,ddxy_s,L,g);% use continuous lip model to calculate COM acceleration
+ddxyz_com = [ddxy_com;0];
+
+% method 2
+xy_com = lip_dynamics_discrete(xy_com,u_zmp,ddxy_s,dT,L,g);
+
+% print
+xy_com_record = [xy_com(1);xy_com(3);xy_com(2);xy_com(4);ddxy_com];
+ddxyz_com_tank = [ddxyz_com_tank xy_com_record];
 footprint = [footprint [MPC_controller.step_size;MPC_controller.step_width]];
 
-% xdes(4+6) = xy_com(2); %vx
-% xdes(5+6) = xy_com(4); %vy
+xdes(4) = xy_com(1); %px
+xdes(5) = xy_com(3); %py
+xdes(4+6) = xy_com(2); %vx
+xdes(5+6) = xy_com(4); %vy
 % xdes(4+6) = sin(dT*100); %vx
 % xdes(5+6) = 0; %vy
-xy_com_tank = [xy_com_tank [0;xdes(4+6);0;xdes(5+6)]];% px vx py vy
-xy_com_act = [xy_com_act [x(4);x(10);x(5);x(11)]];% px vx py vy
+% xy_com_tank = [xy_com_tank [0;xdes(4+6);0;xdes(5+6)]];% px vx py vy
+% xy_com_act = [xy_com_act [x(4);x(10);x(5);x(11)]];% px vx py vy
 x_traj = Calc_x_traj(xdes,x,h,k); % desired trajectory
 foot_traj =[foot(1:3);foot(7:9)]; % assume foot under hip
+desire_traj = [desire_traj x_traj(:,1)];
 % alternatively, can use function Calc_foot_traj_3Dwalking for more
 % accurate foot position esitmate, may present some bugs for 3D locomotion
 
@@ -146,7 +203,7 @@ Bqp=cell2mat(Bqp);
 
 %% MPC Weights: (tune these according to your task)
 % state tracking objective:
-L1 = [850 600 250 ,  300 300 350 ,  1 1 1 ,  1 1 1,  0]; % [eul, p, omega, v, g]
+L1 = [850 600 250 ,  800 300 350 ,  1 1 1 ,  1 1 1,  0]; % [eul, p, omega, v, g]
 % control input minimization:
 alpha=[1 1 1, 1 1 1, 1 1 1, 1 1 1]*10^(-6); % humanoid
 
@@ -330,10 +387,11 @@ function x_traj = Calc_x_traj(xdes,x,h,k)
 global dt_MPC_vec 
  for i = 0:h-1
      for j = 1:6
-         if xdes(6+j) == 0
+         if xdes(6+j) == 0 % if velocity is zero, then position use desired position
              x_traj(j,i+1) = xdes(j) + xdes(6+j)*sum(dt_MPC_vec(k:k+i));
          else
-
+             % if velocity is not zero, then position use current position
+             % plus vt
              x_traj(j,i+1) = x(j) + xdes(6+j)*sum(dt_MPC_vec(k:k+i));
          end
          x_traj(6+j,i+1) = xdes(6+j);
@@ -365,7 +423,13 @@ function A= skew(v)
  A=[0 -v(3) v(2) ; v(3) 0 -v(1) ; -v(2) v(1) 0 ]; 
 end
 
-function X_next = lip_dynamics(X,u,ddxy_s,dT,L,g)
+function ddXY = lip_dynamics(X,u,ddxy_s,L,g)
+
+ddXY = g/L*(X-u)-ddxy_s;
+
+end
+
+function X_next = lip_dynamics_discrete(X,u,ddxy_s,dT,L,g)
 
 A1 = [1 dT;
      g/L*dT 1];

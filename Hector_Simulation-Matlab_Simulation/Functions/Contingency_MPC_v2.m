@@ -4,7 +4,7 @@ function u = Contingency_MPC_v2(uin)
 tic
 %% MPC Parameters
 global i_MPC_var dt_MPC_vec gait x_traj_IC I_error Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait u_zmp desire_traj global_t
-global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L
+global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L last_point
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -78,7 +78,13 @@ if global_t==0
 end
 
 % use real robot states
-xy_com=[x(4);x(10);x(5);x(11)];
+% xy_com=[x(4);x(10);x(5);x(11)];
+
+% fresh to current com at a certain period time
+if rem(k,10) ~= last_point && last_point == 0
+    xy_com=[x(4);x(10);x(5);x(11)]
+end
+last_point = rem(k,10);
 
 % get important data(predicted zmp and actual zmp)
 if (i_gait==0) % R stance
