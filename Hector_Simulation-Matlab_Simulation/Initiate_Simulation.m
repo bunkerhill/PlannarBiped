@@ -9,7 +9,7 @@ clear;
 import casadi.*
 % generate global symbolic functions:
 global Contact_Jacobian Rotm_foot MPC_controller x_z xy_com xy_com_act footprint xy_com_tank desire_traj last_u I_error u_zmp global_t u_zmp_tank x_z_tank
-global ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L last_point
+global ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L last_point moving_xy
 [Contact_Jacobian,Rotm_foot]=Formulate_Contact_Jacobian;
 
 L=0.525;
@@ -33,6 +33,7 @@ fx_end_L = 0;
 fy_end_R = 0;
 fy_end_L = 0;
 last_point = 0;
+moving_xy = [0;0;0;0;0;0];
 %% General (sim world physics)
 world_damping = 1e-3;
 world_rot_damping = 1e-3;

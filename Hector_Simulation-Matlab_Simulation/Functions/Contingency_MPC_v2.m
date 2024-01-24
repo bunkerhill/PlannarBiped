@@ -78,13 +78,17 @@ if global_t==0
 end
 
 % use real robot states
-% xy_com=[x(4);x(10);x(5);x(11)];
 
 % fresh to current com at a certain period time
-if rem(k,10) ~= last_point && last_point == 0
+if global_t <= 0.2
+if rem(k,3) ~= last_point && last_point == 0
     xy_com=[x(4);x(10);x(5);x(11)]
 end
-last_point = rem(k,10);
+last_point = rem(k,3);
+else
+xy_com=[x(4);x(10);x(5);x(11)];
+
+end
 
 % get important data(predicted zmp and actual zmp)
 if (i_gait==0) % R stance

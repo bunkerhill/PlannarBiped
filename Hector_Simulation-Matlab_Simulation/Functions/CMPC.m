@@ -1,4 +1,4 @@
-classdef ACC_MPC
+classdef CMPC
 
     properties
         % one step time
@@ -45,7 +45,7 @@ classdef ACC_MPC
     end
 
     methods
-        function obj = ACC_MPC(g_in,L_in)
+        function obj = CMPC(g_in,L_in)
             obj.g = g_in;
             obj.L = L_in;
             obj.deta = 0.01;

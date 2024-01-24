@@ -4,7 +4,7 @@ function u = Contingency_MPC(uin)
 tic
 %% MPC Parameters
 global i_MPC_var dt_MPC_vec gait x_traj_IC Contact_Jacobian Rotm_foot addArm MPC_controller x_z xy_com xy_com_act footprint xy_com_tank desire_traj i_gait u_zmp global_t
-global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L last_point
+global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L last_point moving_xy
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -49,7 +49,8 @@ dT = 0.008;
 
 % contingency MPC, only care about x-y plane motion
 L = 0.525; % the height of COM
-ddxy_s = [0;0]; % suppose the ground surface is not moving
+% ddxy_s = [0;0]; % suppose the ground surface is not moving
+ddxy_s = moving_xy([3,6]);
 
 % for the beginning of stand on two feet, xy_com is the same as initial actual com
 if global_t==0
@@ -61,10 +62,12 @@ end
 % xy_com=[x(4);x(10);x(5);x(11)];
 
 % fresh to current com at a certain period time
+% if global_t <= 0.2
 if rem(k,3) ~= last_point && last_point == 0
     xy_com=[x(4);x(10);x(5);x(11)]
 end
 last_point = rem(k,3);
+% end
 
 % get important data(predicted zmp and actual zmp)
 if (i_gait==0) % R stance
