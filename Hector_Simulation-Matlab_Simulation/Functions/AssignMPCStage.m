@@ -20,7 +20,7 @@ global acc_t dt_MPC_vec i_MPC_var dt_MPC i_gait gait global_t moving_xy
         % sine curve
         Ax = 0.1;
         T_periodx = 0.6;
-        Ay = 0.1;
+        Ay = 0.05;
         T_periody = 0.6;
 
         x = Ax*sin((t - 0.2)*2*pi/T_periodx);

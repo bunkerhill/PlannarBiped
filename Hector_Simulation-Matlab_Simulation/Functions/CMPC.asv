@@ -540,8 +540,8 @@ classdef CMPC
                         y_min_next = obj.next_zmp_y - 0.5 * obj.foot_width;
                         y_max_next = obj.next_zmp_y + 0.5 * obj.foot_width;
                     else
-                        y_min_next = obj.next_zmp_y + (1-mod(temp1,2)) * obj.step_width - 0.5 * obj.foot_width;
-                        y_max_next = obj.next_zmp_y + (1-mod(temp1,2)) * obj.step_width + 0.5 * obj.foot_width;
+                        y_min_next = obj.next_zmp_y + (-1)^temp1 * obj.step_width - 0.5 * obj.foot_width;
+                        y_max_next = obj.next_zmp_y + (-1)^temp1 * obj.step_width + 0.5 * obj.foot_width;
                     end
                 else
                     y_min_next = -0.5 * obj.step_width - 0.5 * obj.foot_width;
@@ -568,8 +568,8 @@ classdef CMPC
                         y_min_next = obj.next_zmp_y + (1-mod(temp1,2))*obj.step_width - 0.5 * obj.foot_width;
                         y_max_next = obj.next_zmp_y + (1-mod(temp1,2))*obj.step_width + 0.5 * obj.foot_width;
                     else
-                        y_min_next = obj.next_zmp_y - (1-mod(temp1,2))*obj.step_width - 0.5 * obj.foot_width;
-                        y_max_next = obj.next_zmp_y - (1-mod(temp1,2))*obj.step_width + 0.5 * obj.foot_width;
+                        y_min_next = obj.next_zmp_y + (1-mod(temp1,2))*obj.step_width - 0.5 * obj.foot_width;
+                        y_max_next = obj.next_zmp_y + (1-mod(temp1,2))*obj.step_width + 0.5 * obj.foot_width;
                     end
                 end
             else

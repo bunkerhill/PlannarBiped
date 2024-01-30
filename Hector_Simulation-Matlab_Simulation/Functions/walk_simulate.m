@@ -8,11 +8,11 @@ set(groot, 'defaultlegendinterpreter','latex')
 
 L=0.525;
 g=9.8;
-ddxy_s_max = [1.15;1.15];
-ddxy_s_min = [-1.15;-1.15];
+ddxy_s_max = [1.15;0.15];
+ddxy_s_min = [-1.15;-0.15];
 
 % choose a MPC controller
-MPC_controller1 = ACC_MPC(g,L);
+MPC_controller1 = CMPC(g,L,ddxy_s_max,ddxy_s_min);
 % MPC_controller2 = contiMPC(g,L,ddxy_s_max,ddxy_s_min);
 
 % time step
