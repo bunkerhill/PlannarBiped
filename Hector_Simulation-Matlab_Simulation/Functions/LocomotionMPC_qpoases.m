@@ -13,7 +13,9 @@
 function u = LocomotionMPC_qpoases(uin)
 tic
 %% MPC Parameters
-global i_MPC_var dt_MPC_vec gait x_traj_IC Contact_Jacobian Rotm_foot addArm
+global i_MPC_var dt_MPC_vec gait x_traj_IC I_error Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait u_zmp desire_traj global_t
+global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L last_point up_u low_u moving_tank
+global X_min X_max Y_min Y_max moving_xy stance_leg
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -50,6 +52,47 @@ end
 xdes = [xdes;g];
 x = [x;g];
 
+%% print
+% surface position
+xy_s = [moving_xy(1);moving_xy(4)];
+dxy_s = [moving_xy(2);moving_xy(5)];
+xy_s_com = [moving_xy(1);moving_xy(2);moving_xy(4);moving_xy(5)];
+% ddxy_s = [0;0]; % suppose the ground surface is not moving
+ddxy_s = [moving_xy(3);moving_xy(6)];
+
+% for the beginning of stand on two feet, xy_com is the same as initial actual com
+if global_t==0
+    xy_com=[x(4);x(10);x(5);x(11)];
+    u_zmp = (foot(1:2)+foot(7:8))/2;
+end
+
+% fresh to current com at a certain period time for first 0.2s
+if global_t <= 0.2
+if rem(k,3) ~= last_point && last_point == 0
+    xy_com=[x(4);x(10);x(5);x(11)];
+end
+last_point = rem(k,3);
+else
+xy_com=[x(4);x(10);x(5);x(11)]-[moving_xy(1);moving_xy(2);moving_xy(4);moving_xy(5)];
+
+end
+
+% get important data(predicted zmp and actual zmp)
+if (i_gait==0) % R stance
+    x_z = foot(1:2)-xy_s;
+    % xy_com=[x(4);x(10);x(5);x(11)];
+else
+    x_z = foot(7:8)-xy_s;
+end
+
+if global_t <= 0.2
+    % for stand on two feet, x_z is in the middle of two feet
+    x_z = (foot(1:2)+foot(7:8))/2;
+end
+u_zmp_tank = [u_zmp_tank u_zmp];
+x_z_tank = [x_z_tank x_z];
+moving_tank = [moving_tank moving_xy];
+stance_leg = [stance_leg i_gait];
 %% Assigning desired trajectory for CoM and Foot locations
 if k == 1
     x_traj = x_traj_IC;

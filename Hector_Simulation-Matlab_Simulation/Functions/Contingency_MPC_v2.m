@@ -5,7 +5,7 @@ tic
 %% MPC Parameters
 global i_MPC_var dt_MPC_vec gait x_traj_IC I_error Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait u_zmp desire_traj global_t
 global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L last_point up_u low_u moving_tank
-global X_min X_max Y_min Y_max moving_xy
+global X_min X_max Y_min Y_max moving_xy stance_leg
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -86,8 +86,8 @@ if global_t==0
 end
 
 % use real robot states
-
-% fresh to current com at a certain period time
+% xy_com=[x(4);x(10);x(5);x(11)]-[moving_xy(1);moving_xy(2);moving_xy(4);moving_xy(5)];
+% fresh to current com at a certain period time for first 0.2s
 if global_t <= 0.2
 if rem(k,3) ~= last_point && last_point == 0
     xy_com=[x(4);x(10);x(5);x(11)];
@@ -126,18 +126,18 @@ end
 u_zmp_tank = [u_zmp_tank u_zmp];
 x_z_tank = [x_z_tank x_z];
 moving_tank = [moving_tank moving_xy];
-
+stance_leg = [stance_leg i_gait];
 % record CMPC horizon
 up_u = [];
 low_u = [];
-[X_z_dot,X_min,X_max,Y_min,Y_max] = MPC_controller.MPC_horizon(xy_com,u_zmp,ddxy_s,current_zmp_x,current_zmp_y,next_zmp_x,next_zmp_y);
+[X_z_dot,X_min,X_max,Y_min,Y_max] = MPC_controller.MPC_horizon(xy_com,x_z,ddxy_s,current_zmp_x,current_zmp_y,next_zmp_x,next_zmp_y);
 delta_t = 0.01;
-x_z_up = u_zmp;
+x_z_up = x_z;
 for j = 1:(length(X_z_dot)/2)
     x_z_up = x_z_up + delta_t * X_z_dot(j,:)';
     up_u = [up_u,x_z_up];
 end
-x_z_low = u_zmp;
+x_z_low = x_z;
 for j = 1:(length(X_z_dot)/2)
     x_z_low = x_z_low + delta_t * X_z_dot(j+(length(X_z_dot)/2),:)';
     low_u = [low_u,x_z_low];
@@ -145,9 +145,9 @@ end
 
 
 
-u_zmp_dot = MPC_controller.MPC(xy_com,u_zmp,ddxy_s,current_zmp_x,current_zmp_y,next_zmp_x,next_zmp_y);% get zmp velocity from Contingency MPC  %%% u_zmp 
+u_zmp_dot = MPC_controller.MPC(xy_com,x_z,ddxy_s,current_zmp_x,current_zmp_y,next_zmp_x,next_zmp_y);% get zmp velocity from Contingency MPC  %%% u_zmp 
 MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
-u_zmp = u_zmp + dT * u_zmp_dot; % integrate the zmp position  %%% x_z -> u_zmp
+u_zmp = x_z + dT * u_zmp_dot; % integrate the zmp position  %%% x_z -> u_zmp
 
 % method 1
 ddxy_com = lip_dynamics(xy_com([1,3]),u_zmp,ddxy_s,L,g);% use continuous lip model to calculate COM acceleration

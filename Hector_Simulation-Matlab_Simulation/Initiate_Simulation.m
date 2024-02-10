@@ -10,13 +10,15 @@ import casadi.*
 % generate global symbolic functions:
 global Contact_Jacobian Rotm_foot MPC_controller x_z xy_com xy_com_act footprint xy_com_tank desire_traj last_u I_error u_zmp global_t u_zmp_tank x_z_tank moving_tank
 global ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L last_point moving_xy up_u low_u
-global X_min X_max Y_min Y_max
+global X_min X_max Y_min Y_max stance_leg
 [Contact_Jacobian,Rotm_foot]=Formulate_Contact_Jacobian;
 
 L=0.525;
 g=9.81;
-ddxy_s_max = [10;10];
-ddxy_s_min = [-10;-10];
+% ddxy_s_max = [10;10];
+% ddxy_s_min = [-10;-10];
+ddxy_s_max = [0;0];
+ddxy_s_min = [0;0];
 MPC_controller = CMPC(g,L,ddxy_s_max,ddxy_s_min);
 % MPC_controller = ACC_MPC(g,L);
 xy_com = [0;0;0;0];
@@ -30,6 +32,7 @@ u_zmp = [0;0];
 u_zmp_tank = [];
 x_z = [0;0];
 x_z_tank = [];
+stance_leg = [];
 moving_tank = [];
 ddxyz_com_tank = [];
 p_xy_tank = [];
