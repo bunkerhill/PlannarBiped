@@ -105,7 +105,10 @@ end
 end
 
 
-function optimal_zmp = optimalZMP(x_LIP, zmpRange)
-
-
+function optimal_zmp = optimalZMP(x_LIP, current_zmp, zmpRange)
+L=0.525;
+g=9.8;
+omega = sqrt(g/L);
+dt = 0.04;
+lambda = exp(-omega*dt);
 end

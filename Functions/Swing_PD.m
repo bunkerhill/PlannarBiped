@@ -64,7 +64,12 @@ elseif gait == 2
         swing_schedule(1) = 1;
         swing_schedule(2) = 1;
     end
+elseif gait == 0 %standing
+    swing_schedule(1)=0;
+    swing_schedule(2)=0;
 end
+
+
 
 %% transition between two gait freq. (for adaptive frequency walking):
 delta_t = gaitcycle/2;
