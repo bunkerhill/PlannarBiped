@@ -184,7 +184,7 @@ classdef adaptiveFoot
             hold on,plot(obj.stanceFootConstraint.ankleX, obj.stanceFootConstraint.ankleY,'o');
             
             xlabel("x(m)");ylabel("y(m)")
-            legend("stance foot", "\xi", "stance foot");
+            legend("stance foot", "\xi", "stance foot ankle");
 
             % figure,plot(obj.stanceFootConstraint.time, obj.stanceFootConstraint.ankleX,'.');
         end

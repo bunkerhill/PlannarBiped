@@ -20,7 +20,12 @@ currentZMP = [0;0.1];
 timeVector=[];
 xiVector=[];
 zmpVector=[];
-for i=1:10
+for i=1:1000
+    if mod(i,20) == 0
+        % assume the swing leg end at desired second foot placement from footPlanner
+        currentStanceFootPosition = [footPlanner.stanceFootConstraint.ankleX(2);footPlanner.stanceFootConstraint.ankleY(2)];
+        currentStanceFootID = mod(floor(i/20),2);
+    end
     currentTime=0.01*i;
     timeVector=[timeVector, currentTime];
     footPlanner=footPlanner.findOptimalFootPlacement(Nsteps,xi,currentStanceFootID,currentStanceFootPosition,currentTime);
@@ -32,15 +37,20 @@ for i=1:10
     zmpVector=[zmpVector, currentZMP];
     zmpController = zmpController.MPC(xi, currentZMP, currentTime, footPlanner.stanceFootConstraint);
     % zmpController.drawZMPPreviewAndConstraint()
+    % footPlanner.drawPeriodicGait(5)
     optimalZMP = zmpController.getOptimalZMP();
     xi(1)=(xi(1)-optimalZMP(1))*exp(omega*0.01)+optimalZMP(1);
     xi(2)=(xi(2)-optimalZMP(2))*exp(omega*0.01)+optimalZMP(2);
     currentZMP=optimalZMP;
 end
+% footPlanner.drawOptimalFootPlacement()
+% zmpController.drawZMPPreviewAndConstraint()
+% figure,plot(timeVector,zmpVector(1,:),'-')
+% hold on,plot(timeVector, xiVector(1,:),'-')
+% legend("zmp x","\xi_u^x");
+% figure,plot(timeVector,zmpVector(2,:),'-')
+% hold on,plot(timeVector, xiVector(2,:),'-')
+% legend("zmp y","\xi_u^y");
 
-figure,plot(timeVector,zmpVector(1,:),'-')
-hold on,plot(timeVector, xiVector(1,:),'-')
-legend("zmp x","\xi_u^x");
-figure,plot(timeVector,zmpVector(2,:),'-')
-hold on,plot(timeVector, xiVector(2,:),'-')
-legend("zmp y","\xi_u^y");
+figure,plot(zmpVector(1,:),zmpVector(2,:),'-')
+axis equal
