@@ -1,5 +1,4 @@
 close all
-
 %% set up
 set(groot, 'defaulttextinterpreter','latex')
 set(groot, 'defaultaxesticklabelinterpreter','latex')
@@ -57,20 +56,20 @@ ylabel('y position (m)')
 legend({'actual zmp','desired zmp','actual com','desired com'})
 axis equal 
 %%
-% figure
-% for i=1:length(X_min)
-%     rectangle('Position',[X_min(i),Y_min(i),X_max(i)-X_min(i),Y_max(i)-Y_min(i)])
-%     hold on
-% end
-% plot(X_min,Y_min)
-% plot(up_u(1,:),up_u(2,:))
-% plot(low_u(1,:),low_u(2,:))
-% 
-% title('foot position trajectory')
-% xlabel('x (m)') 
-% ylabel('y (m)') 
-% legend({'0','up_COM','low_COM'},'Location','southwest')
-% axis equal 
+figure
+for i=1:length(X_min)
+    rectangle('Position',[X_min(i),Y_min(i),X_max(i)-X_min(i),Y_max(i)-Y_min(i)])
+    hold on
+end
+plot(X_min,Y_min)
+plot(up_u(1,:),up_u(2,:))
+plot(low_u(1,:),low_u(2,:))
+
+title('foot position trajectory')
+xlabel('x (m)') 
+ylabel('y (m)') 
+legend({'0','up_COM','low_COM'},'Location','southwest')
+axis equal 
 
 %%
 % figure
@@ -131,14 +130,14 @@ ylabel('velocity (m/s)')
 legend({'actual x-com','actual y-com'})
 
 figure % position
-plot(T,out.xout(:,4))
+plot(T,out.xout(:,4),'-', 'LineWidth',1.5)
 hold on
-plot(T,out.xout(:,5))
-plot(T,out.xout(:,6))
-title('com position')
+plot(T,out.xout(:,5),'--', 'LineWidth',1.5)
+plot(T,out.xout(:,6),'-.', 'LineWidth',1.5)
 xlabel('time (s)') 
 ylabel('position (m)') 
 legend({'actual x-com','actual y-com','actual z-com'})
+set(gca,'fontsize',14)%%
 %%
 % footprint
 figure
@@ -166,6 +165,15 @@ xlabel('time (s)')
 ylabel('Disturbance (m/s^2)') 
 legend({'x-direction','y-direction'})
 
+figure
+plot(T,moving_tank(1,:))
+hold on
+plot(T,moving_tank(4,:),'--')
+plot(T,moving_tank(2,:))
+plot(T,moving_tank(5,:),'--')
+xlabel('time (s)') 
+ylabel('moving surface motion') 
+legend({'x-position','y-position','x-velocity','y-velocity'})
 %% 3D plot
 figure
 
@@ -187,7 +195,7 @@ end
 [X,Y] = meshgrid(-0.5:0.1:3.5,-0.5:0.1:0.5);
 Z = 0*X;
 surf(X,Y,Z)
-% colorbar
+colorbar
 
 title('foot placement(ZMP)')
 xlabel('x position (m)') 

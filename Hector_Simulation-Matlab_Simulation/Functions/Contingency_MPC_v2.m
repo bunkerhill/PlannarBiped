@@ -88,7 +88,7 @@ end
 % use real robot states
 % xy_com=[x(4);x(10);x(5);x(11)]-[moving_xy(1);moving_xy(2);moving_xy(4);moving_xy(5)];
 % fresh to current com at a certain period time for first 0.2s
-if global_t <= 0.2
+if global_t < 0.2
 if rem(k,3) ~= last_point && last_point == 0
     xy_com=[x(4);x(10);x(5);x(11)];
 end
@@ -114,7 +114,7 @@ else
     next_zmp_y = fy_end_R-xy_s(2);
 end
 
-if global_t <= 0.2
+if global_t < 0.2
     % for stand on two feet, x_z is in the middle of two feet
     x_z = (foot(1:2)+foot(7:8))/2;
 
@@ -123,7 +123,7 @@ if global_t <= 0.2
     next_zmp_x = 0.1; % need modify later
     next_zmp_y = -0.5*0.134; % need modify later
 end
-u_zmp_tank = [u_zmp_tank u_zmp];
+
 x_z_tank = [x_z_tank x_z];
 moving_tank = [moving_tank moving_xy];
 stance_leg = [stance_leg i_gait];
@@ -159,6 +159,7 @@ xy_com = lip_dynamics_discrete(xy_com,u_zmp,ddxy_s,dT,L,g);
 % print
 xy_com_record = [xy_com(1);xy_com(3);xy_com(2);xy_com(4);ddxy_com];
 ddxyz_com_tank = [ddxyz_com_tank xy_com_record];
+u_zmp_tank = [u_zmp_tank u_zmp];
 
 % ground reaction force optimization, only optimize to maintain z direction position and body orientation
 kp_p = diag([250 250 300]); % kp weight for COM position (x,y,z) respectively

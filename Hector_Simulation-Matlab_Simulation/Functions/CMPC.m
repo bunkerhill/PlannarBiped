@@ -150,7 +150,7 @@ classdef CMPC
             [Xz_dot,~,exitflag,~] = quadprog(H,[],A,b,Aeq,beq,lb,ub,[],options);
             
             if exitflag == -2
-               fprintf("-------------------X SOLUTION NOT FOUND--------------------");
+               fprintf("------------------X SOLUTION NOT FOUND-------------------");
             end
 
             %----------------------------------------------------------------------------
