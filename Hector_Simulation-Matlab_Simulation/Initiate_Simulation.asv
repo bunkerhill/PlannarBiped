@@ -20,9 +20,7 @@ stepDuration=0.2;%sec
 averageSpeed=0.5;%m/s
 stepWidth=0.2;%m
 Leftfoot = [0;0];
-Rightfoot = [0;0];
-com_x = [0;0];
-com_dx = [0;0];
+Rightfoot = [0;0] com_x com_dx
 footPlanner=adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth);
 %% intrinsic mpc
 footHalfLength=0.06;

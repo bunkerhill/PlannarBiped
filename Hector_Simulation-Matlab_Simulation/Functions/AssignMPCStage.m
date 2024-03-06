@@ -31,30 +31,30 @@ global last_acc Ax Ay T_periodx T_periody
         % ddy = -Ay*2*pi/T_periody*2*pi/T_periody*sin((t - 0.2)*2*pi/T_periody);
 
         % random
-        ddxy_s = random(:,count); % 0.56  0.58
-        if abs(ddxy_s(1) - last_acc(1)) > 3
-            ddxy_s(1) = last_acc(1) + sign((ddxy_s(1) - last_acc(1)))*3;
-        end
-
-        if abs(ddxy_s(2) - last_acc(2)) > 3
-            ddxy_s(2) = last_acc(2) + sign((ddxy_s(2) - last_acc(2)))*3;
-        end
-        last_acc = ddxy_s;
-        count = count + 1;
+        % ddxy_s = random(:,count); % 0.56  0.58
+        % if abs(ddxy_s(1) - last_acc(1)) > 3
+        %     ddxy_s(1) = last_acc(1) + sign((ddxy_s(1) - last_acc(1)))*3;
+        % end
+        % 
+        % if abs(ddxy_s(2) - last_acc(2)) > 3
+        %     ddxy_s(2) = last_acc(2) + sign((ddxy_s(2) - last_acc(2)))*3;
+        % end
+        % last_acc = ddxy_s;
+        % count = count + 1;
 
         % sin curve
         ddx = -Ax*2*pi/T_periodx*2*pi/T_periodx*sin((t - 0.2)*2*pi/T_periodx);
         ddy = -Ay*2*pi/T_periody*2*pi/T_periody*sin((t - 0.2)*2*pi/T_periody);
         
-        ddx = ddx + ddxy_s(1);
-        ddy = ddy + ddxy_s(2);
+        % ddx = ddx + ddxy_s(1);
+        % ddy = ddy + ddxy_s(2);
 
         dx = dx + ddx*dt;
         x = x + dx*dt;
         dy = dy + ddy*dt;
         y = y + dy*dt;
         moving_xy = [x;dx;ddx;y;dy;ddy];
-        % moving_xy = [0;0;0;0;0;0];
+        moving_xy = [0;0;0;0;0;0];
 
         gait = 1;
         idx = find(acc_t<t - 0.2 + 1e-3);  %Find indices of nonzero elements.

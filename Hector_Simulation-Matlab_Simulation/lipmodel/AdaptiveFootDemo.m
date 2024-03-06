@@ -5,7 +5,7 @@ close all
 
 comHeight=0.525;% center of mass height
 stepDuration=0.2;%sec
-averageSpeed=0.4;%m/s
+averageSpeed=0.5;%m/s
 stepWidth=0.2;%m
 g=9.8;%m/s^2
 omega=sqrt(g/comHeight);

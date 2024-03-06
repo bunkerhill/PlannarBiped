@@ -6,7 +6,7 @@ function tau=Swing_PD(uin)
 %test=test+1 % check this output to locate break point
 
 global  dt_MPC gait i_gait acc_t i_MPC_var dt_MPC_vec stand_position current_height MPC_controller
-global fx_end_R fx_end_L fy_end_R fy_end_L moving_xy next_footHold Leftfoot Rightfoot com_x com_dx
+global fx_end_R fx_end_L fy_end_R fy_end_L moving_xy
 t=uin(1);
 if t < 0.2
     t = 0;
@@ -25,8 +25,7 @@ RPY=x(1:3); % Roll Pitch Yaw
 x_act=x(4:6); % CoM position
 w_act=x(7:9); % Angular velocity
 v_act=x(10:12); % CoM velocity
-com_x = x(4:5); % CoM position
-com_dx = x(10:11); % CoM velocity
+
 
 % Feedback term coefficient
 % (rough approximation, actual COM is lower than xdes(6))
@@ -54,8 +53,7 @@ fpR = fpfv(1:3); % foot pos
 fpL = fpfv(7:9);
 fvR = fpfv(4:6); % foot vel
 fvL = fpfv(10:12);
-Rightfoot = fpfv(1:2); % foot pos xy
-Leftfoot = fpfv(7:8); % foot pos xy
+
 %% Gait scheduler
 stage = floor((i_MPC_var-1)/5);
 ii = (stage)*5+1;
@@ -133,15 +131,15 @@ r=0.047+width;
 % ref: Li, Junheng, and Quan Nguyen. "Dynamic Walking of Bipedal Robots
 % on Uneven Stepping Stones via Adaptive-Frequency MPC." IEEE Control
 % Systems Letters 7 (2023): 1279-1284.
-% fx_end_R = p_hip_R_w(1)+(delta_t+delta_t2)/2*(vx_act+wz_act*r*cos(eul(3)))/2+K_step*(vx_act-vx_des);
-% fy_end_R = p_hip_R_w(2)+(delta_t+delta_t2)/2*(vy_act+wz_act*r*sin(eul(3)))/2+K_step*(vy_act-vy_des);
-% fx_end_L = p_hip_L_w(1)+(delta_t+delta_t2)/2*(vx_act-wz_act*r*cos(eul(3)))/2+K_step*(vx_act-vx_des);
-% fy_end_L = p_hip_L_w(2)+(delta_t+delta_t2)/2*(vy_act-wz_act*r*sin(eul(3)))/2+K_step*(vy_act-vy_des);
+fx_end_R = p_hip_R_w(1)+(delta_t+delta_t2)/2*(vx_act+wz_act*r*cos(eul(3)))/2+K_step*(vx_act-vx_des);
+fy_end_R = p_hip_R_w(2)+(delta_t+delta_t2)/2*(vy_act+wz_act*r*sin(eul(3)))/2+K_step*(vy_act-vy_des);
+fx_end_L = p_hip_L_w(1)+(delta_t+delta_t2)/2*(vx_act-wz_act*r*cos(eul(3)))/2+K_step*(vx_act-vx_des);
+fy_end_L = p_hip_L_w(2)+(delta_t+delta_t2)/2*(vy_act-wz_act*r*sin(eul(3)))/2+K_step*(vy_act-vy_des);
 
-fx_end_R = next_footHold(1);
-fy_end_R = next_footHold(2);
-fx_end_L = next_footHold(1);
-fy_end_L = next_footHold(2);
+% fx_end_R = p_hip_R_w(1)+0.3;
+% fy_end_R = p_hip_R_w(2)-0.5;
+% fx_end_L = p_hip_L_w(1)+0.3;
+% fy_end_L = p_hip_L_w(2)+0.5;
 
 fx_des_R=(t_halfcycle/delta_t)*(fx_end_R-stand_position(1,1))+stand_position(1,1);
 fy_des_R=(t_halfcycle/delta_t)*(fy_end_R-stand_position(2,1))+stand_position(2,1);
