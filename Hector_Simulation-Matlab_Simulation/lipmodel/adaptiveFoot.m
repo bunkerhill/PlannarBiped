@@ -81,10 +81,10 @@ classdef adaptiveFoot
             obj.dcmXSteady = obj.stepLengthSteady/(1/obj.deltaTransformation(obj.stepDuration) -1);
             obj.dcmYSteady = obj.stepWidthSteady/(1/obj.deltaTransformation(obj.stepDuration) +1);
             % set constraints
-            obj.leftStepWidthMax=0.3;
+            obj.leftStepWidthMax=0.4;
             obj.leftStepWidthMin=0.1;
             obj.rightStepWidthMax=-0.1;
-            obj.rightStepWidthMin=-0.3;
+            obj.rightStepWidthMin=-0.4;
 
             obj.rightStepDcmOffsetMax = 1;
             obj.rightStepDcmOffsetMin = 0;
@@ -179,7 +179,7 @@ classdef adaptiveFoot
             xlabel("t(sec)"); ylabel("y(m)");
             legend("stance foot y","\xi_u^y","stance foot ankle y")
 
-            figure,plot(stanceFootVector(1,:),stanceFootVector(2,:),'*')
+            figure,plot(stanceFootVector(1,:),stanceFootVector(2,:),'*-')
             hold on,plot(xiVector(1,:),xiVector(2,:));
             hold on,plot(obj.stanceFootConstraint.ankleX, obj.stanceFootConstraint.ankleY,'o');
             

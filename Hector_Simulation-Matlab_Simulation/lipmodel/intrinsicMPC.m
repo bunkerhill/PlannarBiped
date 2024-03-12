@@ -167,7 +167,7 @@ classdef intrinsicMPC
             xlabel("t(sec)");ylabel("y(m)")
             legend("ZMP y constraint max", "ZMP y constraint min", "optimal ZMP y")
 
-            figure,plot(obj.previewZMPXPosition, obj.previewZMPYPosition,'.');
+            figure,plot(obj.previewZMPXPosition, obj.previewZMPYPosition);
             hold on,plot(obj.previewZMPXPosition, obj.previewZMPYPosition,'.');
             axis equal
             xlabel("x(m)");ylabel("y(m)")

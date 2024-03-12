@@ -5,7 +5,7 @@ tic
 %% MPC Parameters
 global i_MPC_var dt_MPC_vec gait x_traj_IC I_error Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait u_zmp desire_traj global_t
 global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L last_point up_u low_u moving_tank
-global X_min X_max Y_min Y_max moving_xy stance_leg zmpController footPlanner
+global X_min X_max Y_min Y_max moving_xy stance_leg zmpController footPlanner com_x com_dx
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -139,7 +139,8 @@ if global_t >= 0.21
     comHeight=0.525;
     g=9.8;%m/s^2
     omega=sqrt(g/comHeight);
-    xi = [x(4);x(5)] + [x(10);x(11)]/omega;
+    % xi = [x(4);x(5)] + [x(10);x(11)]/omega;
+    xi = com_x + com_dx/omega;;
     currentZMP = [current_zmp_x;current_zmp_y];
     currentTime = global_t-0.2;
     zmpController = zmpController.MPC(xi, currentZMP, currentTime, footPlanner.stanceFootConstraint);
@@ -152,11 +153,17 @@ if global_t >= 0.21
     ddxyz_com = [ddxy_com;0];
     % method 2
     xy_com = lip_dynamics_discrete(xy_com,u_zmp,ddxy_s,dT,L,g);
-    % print
-    xy_com_record = [xy_com(1);xy_com(3);xy_com(2);xy_com(4);ddxy_com];
-    ddxyz_com_tank = [ddxyz_com_tank xy_com_record];
-    u_zmp_tank = [u_zmp_tank u_zmp];
+
+else
+    xy_com = [0;0;0;0];
+    ddxy_com = [0;0];
+    u_zmp = [0;0];
 end
+
+% print
+xy_com_record = [xy_com(1);xy_com(3);xy_com(2);xy_com(4);ddxy_com];
+ddxyz_com_tank = [ddxyz_com_tank xy_com_record];
+u_zmp_tank = [u_zmp_tank u_zmp];
 
 % ground reaction force optimization, only optimize to maintain z direction position and body orientation
 kp_p = diag([250 250 300]); % kp weight for COM position (x,y,z) respectively

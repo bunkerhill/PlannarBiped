@@ -3,7 +3,7 @@ close all
 set(groot, 'defaulttextinterpreter','latex')
 set(groot, 'defaultaxesticklabelinterpreter','latex')
 set(groot, 'defaultlegendinterpreter','latex')
-T=0:0.008:1.43;
+T=0:0.008:5;
 %% plot
 figure
 plot(T,u_zmp_tank(1,:))
@@ -27,17 +27,17 @@ xlabel('time (s)')
 ylabel('position (m)') 
 legend({'desired zmp','actual zmp low','actual zmp high'})
 
-% figure
-% plot(x_z_tank(1,:),x_z_tank(end,:))
-% hold on
-% plot(u_zmp_tank(1,:),u_zmp_tank(end,:))
-% plot(out.xout(:,4),out.xout(:,5))
-% plot(ddxyz_com_tank(1,:),ddxyz_com_tank(2,:))
-% title('foot placement(ZMP) in x-y plane')
-% xlabel('x position (m)') 
-% ylabel('y position (m)') 
-% legend({'actual zmp','desired zmp','actual com','desired com'})
-% axis equal 
+figure
+plot(x_z_tank(1,:),x_z_tank(end,:))
+hold on
+plot(u_zmp_tank(1,:),u_zmp_tank(end,:))
+plot(out.xout(:,4),out.xout(:,5))
+plot(ddxyz_com_tank(1,:),ddxyz_com_tank(2,:))
+title('foot placement(ZMP) in x-y plane')
+xlabel('x position (m)') 
+ylabel('y position (m)') 
+legend({'actual zmp','desired zmp','actual com','desired com'})
+axis equal 
 
 % footprint
 figure
@@ -56,20 +56,20 @@ ylabel('y position (m)')
 legend({'actual zmp','desired zmp','actual com','desired com'})
 axis equal 
 %%
-figure
-for i=1:length(X_min)
-    rectangle('Position',[X_min(i),Y_min(i),X_max(i)-X_min(i),Y_max(i)-Y_min(i)])
-    hold on
-end
-plot(X_min,Y_min)
-plot(up_u(1,:),up_u(2,:))
-plot(low_u(1,:),low_u(2,:))
-
-title('foot position trajectory')
-xlabel('x (m)') 
-ylabel('y (m)') 
-legend({'0','up_COM','low_COM'},'Location','southwest')
-axis equal 
+% figure
+% for i=1:length(X_min)
+%     rectangle('Position',[X_min(i),Y_min(i),X_max(i)-X_min(i),Y_max(i)-Y_min(i)])
+%     hold on
+% end
+% plot(X_min,Y_min)
+% plot(up_u(1,:),up_u(2,:))
+% plot(low_u(1,:),low_u(2,:))
+% 
+% title('foot position trajectory')
+% xlabel('x (m)') 
+% ylabel('y (m)') 
+% legend({'0','up_COM','low_COM'},'Location','southwest')
+% axis equal 
 
 %%
 % figure
