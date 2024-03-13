@@ -167,22 +167,22 @@ classdef adaptiveFoot
                 xiY=(xiVector(2,end)-stanceFootNextStep(2))*exp(obj.omega*(timeNextStep-timeNextStep(1)))+stanceFootNextStep(2);
                 xiVector=[xiVector, [xiX;xiY]];
             end
-            figure,plot(timeVector, stanceFootVector(1,:),'.');
-            hold on,plot(timeVector, xiVector(1,:));
-            hold on,plot(obj.stanceFootConstraint.time, obj.stanceFootConstraint.ankleX,'o');
-            xlabel("t(sec)"); ylabel("x(m)");
-            legend("stance foot x","\xi_u^x","stance foot ankle x")
-
-            figure,plot(timeVector, stanceFootVector(2,:),'.');
-            hold on,plot(timeVector, xiVector(2,:));
-            hold on,plot(obj.stanceFootConstraint.time, obj.stanceFootConstraint.ankleY,'o');
-            xlabel("t(sec)"); ylabel("y(m)");
-            legend("stance foot y","\xi_u^y","stance foot ankle y")
+            % figure,plot(timeVector, stanceFootVector(1,:),'.');
+            % hold on,plot(timeVector, xiVector(1,:));
+            % hold on,plot(obj.stanceFootConstraint.time, obj.stanceFootConstraint.ankleX,'o');
+            % xlabel("t(sec)"); ylabel("x(m)");
+            % legend("stance foot x","\xi_u^x","stance foot ankle x")
+            % 
+            % figure,plot(timeVector, stanceFootVector(2,:),'.');
+            % hold on,plot(timeVector, xiVector(2,:));
+            % hold on,plot(obj.stanceFootConstraint.time, obj.stanceFootConstraint.ankleY,'o');
+            % xlabel("t(sec)"); ylabel("y(m)");
+            % legend("stance foot y","\xi_u^y","stance foot ankle y")
 
             figure,plot(stanceFootVector(1,:),stanceFootVector(2,:),'*-')
             hold on,plot(xiVector(1,:),xiVector(2,:));
             hold on,plot(obj.stanceFootConstraint.ankleX, obj.stanceFootConstraint.ankleY,'o');
-            
+            axis equal
             xlabel("x(m)");ylabel("y(m)")
             legend("stance foot", "\xi", "stance foot ankle");
 

@@ -10,7 +10,7 @@ if t < 0.2
 else
 
     currentTime = t - 0.2;
-    Nsteps = 8; % number of steps that planner plans ahead
+    Nsteps = 5; % number of steps that planner plans ahead
     comHeight=0.525;
     g=9.8;%m/s^2
     omega=sqrt(g/comHeight);

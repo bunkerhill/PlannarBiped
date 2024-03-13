@@ -85,17 +85,26 @@ if global_t==0
 end
 
 % use real robot states
-% xy_com=[x(4);x(10);x(5);x(11)]-[moving_xy(1);moving_xy(2);moving_xy(4);moving_xy(5)];
-% fresh to current com at a certain period time for first 0.2s
-if global_t < 0.2
-if rem(k,3) ~= last_point && last_point == 0
-    xy_com=[x(4);x(10);x(5);x(11)];
-end
-last_point = rem(k,3);
-else
 xy_com=[x(4);x(10);x(5);x(11)]-[moving_xy(1);moving_xy(2);moving_xy(4);moving_xy(5)];
+% fresh to current com at a certain period time for first 0.2s
+% if global_t < 0.2
+% if rem(k,3) ~= last_point && last_point == 0
+%     xy_com=[x(4);x(10);x(5);x(11)];
+% end
+% last_point = rem(k,3);
+% else
+% xy_com=[x(4);x(10);x(5);x(11)]-[moving_xy(1);moving_xy(2);moving_xy(4);moving_xy(5)];
+% 
+% end
 
+if global_t > 0.22
+    if rem(k,5) ~= last_point && last_point == 0
+        footPlanner.drawOptimalFootPlacement();
+    end
+    last_point = rem(k,5);
 end
+    
+
 
 % get important data(predicted zmp and actual zmp)
 if (i_gait==0) % R stance
@@ -158,6 +167,7 @@ else
     xy_com = [0;0;0;0];
     ddxy_com = [0;0];
     u_zmp = [0;0];
+    ddxyz_com = [0;0;0];
 end
 
 % print
@@ -187,7 +197,7 @@ end
 
 % For z direction, calculate desired COM linear acceleration with PD; 
 % For y and x directions, directly use acceleration from contingency MPC's output
-p_cddot = kp_p*(xyz_com-(x_act-[xy_s;0])) + kd_p*(dxyz_com-(v_act-[dxy_s;0])); 
+p_cddot = kp_p*(xyz_com-(x_act-[xy_s;0])) + kd_p*(dxyz_com-(v_act-[dxy_s;0])) + ddxyz_com; 
 
 % Calculate desired COM angular acceleration with PID
 R1 = eul2rotm([w_com(3),w_com(2),w_com(1)], 'ZYX');% rotation matrix of desired COM axis angle
