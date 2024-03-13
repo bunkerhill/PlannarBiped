@@ -97,12 +97,12 @@ xy_com=[x(4);x(10);x(5);x(11)]-[moving_xy(1);moving_xy(2);moving_xy(4);moving_xy
 % 
 % end
 
-if global_t > 0.22
-    if rem(k,5) ~= last_point && last_point == 0
-        footPlanner.drawOptimalFootPlacement();
-    end
-    last_point = rem(k,5);
-end
+%%% draw foot placement
+% if rem(k,5) ~= last_point && last_point == 0
+%     footPlanner.drawOptimalFootPlacement();
+% end
+% last_point = rem(k,5);
+
     
 
 
@@ -116,13 +116,6 @@ else
     x_z = foot(7:8)-xy_s;
     current_zmp_x = foot(7)-xy_s(1);
     current_zmp_y = foot(8)-xy_s(2);
-end
-
-if global_t < 0.2
-    % for stand on two feet, x_z is in the middle of two feet
-    x_z = (foot(1:2)+foot(7:8))/2;
-    current_zmp_x = foot(7);
-    current_zmp_y = foot(8);
 end
 
 x_z_tank = [x_z_tank x_z];
@@ -144,31 +137,23 @@ stance_leg = [stance_leg i_gait];
 %     low_u = [low_u,x_z_low];
 % end
 
-if global_t >= 0.21
-    comHeight=0.525;
-    g=9.8;%m/s^2
-    omega=sqrt(g/comHeight);
-    % xi = [x(4);x(5)] + [x(10);x(11)]/omega;
-    xi = com_x + com_dx/omega;;
-    currentZMP = [current_zmp_x;current_zmp_y];
-    currentTime = global_t-0.2;
-    zmpController = zmpController.MPC(xi, currentZMP, currentTime, footPlanner.stanceFootConstraint);
-    % u_zmp_dot = MPC_controller.MPC(xy_com,x_z,ddxy_s,current_zmp_x,current_zmp_y,next_zmp_x,next_zmp_y);% get zmp velocity from Contingency MPC  %%% u_zmp 
-    % MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
-    % u_zmp = x_z + dT * u_zmp_dot; % integrate the zmp position  %%% x_z -> u_zmp
-    u_zmp = zmpController.getOptimalZMP();
-    % method 1
-    ddxy_com = lip_dynamics(xy_com([1,3]),u_zmp,ddxy_s,L,g);% use continuous lip model to calculate COM acceleration
-    ddxyz_com = [ddxy_com;0];
-    % method 2
-    xy_com = lip_dynamics_discrete(xy_com,u_zmp,ddxy_s,dT,L,g);
-
-else
-    xy_com = [0;0;0;0];
-    ddxy_com = [0;0];
-    u_zmp = [0;0];
-    ddxyz_com = [0;0;0];
-end
+comHeight=0.525;
+g=9.8;%m/s^2
+omega=sqrt(g/comHeight);
+% xi = [x(4);x(5)] + [x(10);x(11)]/omega;
+xi = com_x + com_dx/omega;;
+currentZMP = [current_zmp_x;current_zmp_y];
+currentTime = global_t;
+zmpController = zmpController.MPC(xi, currentZMP, currentTime, footPlanner.stanceFootConstraint);
+% u_zmp_dot = MPC_controller.MPC(xy_com,x_z,ddxy_s,current_zmp_x,current_zmp_y,next_zmp_x,next_zmp_y);% get zmp velocity from Contingency MPC  %%% u_zmp 
+% MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
+% u_zmp = x_z + dT * u_zmp_dot; % integrate the zmp position  %%% x_z -> u_zmp
+u_zmp = zmpController.getOptimalZMP();
+% method 1
+ddxy_com = lip_dynamics(xy_com([1,3]),u_zmp,ddxy_s,L,g);% use continuous lip model to calculate COM acceleration
+ddxyz_com = [ddxy_com;0];
+% method 2
+xy_com = lip_dynamics_discrete(xy_com,u_zmp,ddxy_s,dT,L,g);
 
 % print
 xy_com_record = [xy_com(1);xy_com(3);xy_com(2);xy_com(4);ddxy_com];
@@ -187,13 +172,9 @@ dw_com = x_traj(7:9); % COM angular velociy
 dxyz_com = x_traj(10:12); % COM velocity
 
 % modify
-if global_t < 0.2
-    xyz_com(1:2) = x_act([1,2]);
-    dxyz_com(1:2) = v_act([1,2]);
-else
-    xyz_com(1:2) = xy_com([1,3]);
-    dxyz_com(1:2) = xy_com([2,4]);
-end
+xyz_com(1:2) = xy_com([1,3]);
+dxyz_com(1:2) = xy_com([2,4]);
+
 
 % For z direction, calculate desired COM linear acceleration with PD; 
 % For y and x directions, directly use acceleration from contingency MPC's output
@@ -450,13 +431,13 @@ end
 function gaitm = gaitSchedule(i)
 
 % walking 
-Lm = [0;0;0;0;0; 1;1;1;1;1];
-Rm = [1;1;1;1;1; 0;0;0;0;0];
+Rm = [0;0;0;0;0; 1;1;1;1;1];
+Lm = [1;1;1;1;1; 0;0;0;0;0];
 
 if(i==0) % R stance
-    gaitm = Rm;
-else
     gaitm = Lm;
+else
+    gaitm = Rm;
 end
 
 end
