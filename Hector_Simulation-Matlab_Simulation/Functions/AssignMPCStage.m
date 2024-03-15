@@ -34,8 +34,8 @@ dt = 0.0005;
 % count = count + 1;
 
 % sin curve
-ddx = -Ax*2*pi/T_periodx*2*pi/T_periodx*sin((t - 0.2)*2*pi/T_periodx);
-ddy = -Ay*2*pi/T_periody*2*pi/T_periody*sin((t - 0.2)*2*pi/T_periody);
+ddx = -Ax*2*pi/T_periodx*2*pi/T_periodx*sin(t*2*pi/T_periodx);
+ddy = -Ay*2*pi/T_periody*2*pi/T_periody*sin(t*2*pi/T_periody);
 
 % ddx = ddx + ddxy_s(1);
 % ddy = ddy + ddxy_s(2);
@@ -44,7 +44,7 @@ dx = dx + ddx*dt;
 x = x + dx*dt;
 dy = dy + ddy*dt;
 y = y + dy*dt;
-moving_xy = [x;dx;ddx;y;dy;ddy];
+% moving_xy = [x;dx;ddx;y;dy;ddy];
 moving_xy = [0;0;0;0;0;0];
 
 idx = find(acc_t<t + 1e-3);  %Find indices of nonzero elements.
