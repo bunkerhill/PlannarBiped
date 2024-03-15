@@ -320,15 +320,9 @@ classdef adaptiveFoot
                 end
                 if i==Nsteps
                     % if this is the last step
-                    if obj.stanceFootSeq(i)==0
-                        % left foot
-                        dcmOffsetLowerBound(i)=-obj.dcmYSteady;
-                        dcmOffsetUpperBound(i)=-obj.dcmYSteady;
-                    else
-                        % right foot
-                        dcmOffsetLowerBound(i)=obj.dcmYSteady;
-                        dcmOffsetUpperBound(i)=obj.dcmYSteady;
-                    end
+                    
+                    dcmOffsetLowerBound(i)=obj.dcmYSteady;
+                    dcmOffsetUpperBound(i)=obj.dcmYSteady;
                     dcmOffsetInitialGuess(i)=dcmOffsetUpperBound(i);
                     stanceFootInitialGuess(i)=stepWidthUpperBound(i);
                 end
