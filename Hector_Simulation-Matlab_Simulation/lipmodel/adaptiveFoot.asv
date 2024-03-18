@@ -257,14 +257,22 @@ classdef adaptiveFoot
             s = SX.sym('s', Nsteps);
             leftFoot = [];
             rightFoot = [];
+            leftDCM = [];
+            rightDCM = [];
+            leftwidth = [];
+            rightwidth = [];
             stanceFootPosition = currentStanceFootPosition;
             for i=1:Nsteps
                 if obj.stanceFootSeq(i)==0
                     % left foot
                     leftFoot=[leftFoot, stanceFootPosition+s(i)];
+                    leftDCM = [leftDCM, b(i)];
+                    leftwidth = [leftwidth, s(i)];
                 else
                     % right foot
                     rightFoot=[rightFoot, stanceFootPosition+s(i)];
+                    rightDCM = [rightDCM, b(i)];
+                    rightwidth = [rightwidth, s(i)];
                 end
                 stanceFootPosition = stanceFootPosition+s(i);
             end
@@ -272,8 +280,15 @@ classdef adaptiveFoot
             % objective function
             leftFootSteadyState = obj.stepWidthSteady/2;
             rightFootSteadyState = -obj.stepWidthSteady/2;
-            objectiveFunction = (leftFoot-leftFootSteadyState)*(leftFoot-leftFootSteadyState)'...
-                +(rightFoot-rightFootSteadyState)*(rightFoot-rightFootSteadyState)';
+            leftDCMSteady = -obj.dcmYSteady;
+            rightDCMSteady = obj.dcmYSteady;
+            % objectiveFunction = (leftFoot-leftFootSteadyState)*(leftFoot-leftFootSteadyState)'...
+            %     +(rightFoot-rightFootSteadyState)*(rightFoot-rightFootSteadyState)'...
+            %     + (leftDCM-leftDCMSteady)*(leftDCM-leftDCMSteady)' + (rightDCM-rightDCMSteady)*(rightDCM-rightDCMSteady)';
+            objectiveFunction = (leftFoot(1)-leftFootSteadyState)*(leftFoot(1)-leftFootSteadyState)'...
+                +0*(rightFoot(1)-rightFootSteadyState)*(rightFoot(1)-rightFootSteadyState)'...
+                + (leftDCM-leftDCMSteady)*(leftDCM-leftDCMSteady)' + (rightDCM-rightDCMSteady)*(rightDCM-rightDCMSteady)'...
+                + (leftwidth-obj.stepWidthSteady)*(leftwidth-obj.stepWidthSteady)' + (rightwidth-obj.stepWidthSteady)*(rightwidth-obj.stepWidthSteady)';
             % equality constraint
             deltaT = obj.deltaTransformation(obj.stepDuration);
             deltaTLeftover = obj.deltaTransformation(obj.leftoverTime);
@@ -320,9 +335,15 @@ classdef adaptiveFoot
                 end
                 if i==Nsteps
                     % if this is the last step
-                    
-                    dcmOffsetLowerBound(i)=obj.dcmYSteady;
-                    dcmOffsetUpperBound(i)=obj.dcmYSteady;
+                    if obj.stanceFootSeq(i)==0
+                        % left foot
+                        dcmOffsetLowerBound(i)=-obj.dcmYSteady;
+                        dcmOffsetUpperBound(i)=-obj.dcmYSteady;
+                    else
+                        % right foot
+                        dcmOffsetLowerBound(i)=obj.dcmYSteady;
+                        dcmOffsetUpperBound(i)=obj.dcmYSteady;
+                    end
                     dcmOffsetInitialGuess(i)=dcmOffsetUpperBound(i);
                     stanceFootInitialGuess(i)=stepWidthUpperBound(i);
                 end

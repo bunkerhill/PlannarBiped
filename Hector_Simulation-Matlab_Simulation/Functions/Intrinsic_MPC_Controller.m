@@ -5,7 +5,7 @@ tic
 %% MPC Parameters
 global i_MPC_var dt_MPC_vec gait x_traj_IC I_error Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait u_zmp desire_traj global_t
 global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L last_point up_u low_u moving_tank
-global X_min X_max Y_min Y_max moving_xy stance_leg zmpController footPlanner com_x com_dx
+global X_min X_max Y_min Y_max moving_xy stance_leg zmpController footPlanner com_x com_dx next_footHold footHoldVector
 k = i_MPC_var; % current horizon
 h = 10; % prediction horizons
 g = 9.81; % gravity
@@ -121,6 +121,7 @@ end
 x_z_tank = [x_z_tank x_z];
 moving_tank = [moving_tank moving_xy];
 stance_leg = [stance_leg i_gait];
+footHoldVector = [footHoldVector next_footHold];
 % record CMPC horizon
 % up_u = [];
 % low_u = [];

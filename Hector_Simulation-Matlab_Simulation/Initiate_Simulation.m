@@ -11,7 +11,7 @@ import casadi.*
 global Contact_Jacobian Rotm_foot MPC_controller x_z xy_com xy_com_act footprint xy_com_tank desire_traj last_u I_error u_zmp global_t u_zmp_tank x_z_tank moving_tank
 global ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L last_point moving_xy up_u low_u
 global X_min X_max Y_min Y_max stance_leg dx dy x y random count last_acc Ax Ay T_periodx T_periody
-global footPlanner zmpController next_footHold Leftfoot Rightfoot com_x com_dx
+global footPlanner zmpController next_footHold Leftfoot Rightfoot com_x com_dx footHoldVector
 [Contact_Jacobian,Rotm_foot]=Formulate_Contact_Jacobian;
 
 %% adaptive foot placement planner
@@ -23,6 +23,7 @@ Leftfoot = [0;0];
 Rightfoot = [0;0];
 com_x = [0;0];
 com_dx = [0;0];
+next_footHold = [0;0];
 footPlanner=adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth);
 %% intrinsic mpc
 footHalfLength=0.06;
@@ -69,6 +70,7 @@ x_z_tank = [];
 stance_leg = [];
 moving_tank = [];
 ddxyz_com_tank = [];
+footHoldVector = [];
 p_xy_tank = [];
 fx_end_R = 0; 
 fx_end_L = 0;

@@ -44,8 +44,8 @@ dx = dx + ddx*dt;
 x = x + dx*dt;
 dy = dy + ddy*dt;
 y = y + dy*dt;
-% moving_xy = [x;dx;ddx;y;dy;ddy];
-moving_xy = [0;0;0;0;0;0];
+moving_xy = [x;dx;ddx;y;dy;ddy];
+% moving_xy = [0;0;0;0;0;0];
 
 idx = find(acc_t<t + 1e-3);  %Find indices of nonzero elements.
 i_MPC_var = idx(end); % get current MPC stage index
