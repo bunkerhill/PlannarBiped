@@ -41,10 +41,10 @@ zmpController = intrinsicMPC(comHeight, footHalfLength, footHalfWidth);
 % T_periodx = 0.6;
 % Ay = 0.1;
 % T_periody = 0.6;
-Ax = 0.07;
-T_periodx = 0.6;
+Ax = 0.1;
+T_periodx = 1.3;
 Ay = 0.05;
-T_periody = 0.8;
+T_periody = 2;
 
 last_acc = [0;0];
 count = 1;

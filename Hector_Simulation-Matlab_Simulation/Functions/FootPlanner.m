@@ -1,7 +1,8 @@
 function [t] = FootPlanner(t)
 % global variables
-global footPlanner next_footHold i_gait Leftfoot Rightfoot com_x com_dx
+global footPlanner next_footHold i_gait Leftfoot Rightfoot com_x com_dx moving_xy
 
+ddxy_s = [moving_xy(3);moving_xy(6)];
 currentTime = t;
 Nsteps = 5; % number of steps that planner plans ahead
 comHeight=0.525;
@@ -19,7 +20,7 @@ end
 currentStanceFootPosition = foot;
 xi = com_x + com_dx/omega;% divergent component of motion x,y
 
-footPlanner = footPlanner.findOptimalFootPlacement(Nsteps,xi,currentStanceFootID,currentStanceFootPosition,currentTime);
+footPlanner = footPlanner.findOptimalFootPlacement(Nsteps,xi,currentStanceFootID,currentStanceFootPosition,currentTime,ddxy_s);
 next_footHold = [footPlanner.stanceFootConstraint.ankleX(2);footPlanner.stanceFootConstraint.ankleY(2)];
 
 end

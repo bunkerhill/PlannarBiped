@@ -3,7 +3,7 @@ close all
 set(groot, 'defaulttextinterpreter','latex')
 set(groot, 'defaultaxesticklabelinterpreter','latex')
 set(groot, 'defaultlegendinterpreter','latex')
-T=0:0.008:5;
+T=0:0.008:4;
 %% plot
 figure
 plot(T,u_zmp_tank(1,:))

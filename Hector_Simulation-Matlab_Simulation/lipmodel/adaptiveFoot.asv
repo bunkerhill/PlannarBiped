@@ -82,8 +82,8 @@ classdef adaptiveFoot
             obj.dcmYSteady = obj.stepWidthSteady/(1/obj.deltaTransformation(obj.stepDuration) +1);
             % set constraints
             obj.leftStepWidthMax=0.4;
-            obj.leftStepWidthMin=0.1;
-            obj.rightStepWidthMax=-0.1;
+            obj.leftStepWidthMin=0.0;
+            obj.rightStepWidthMax=-0.0;
             obj.rightStepWidthMin=-0.4;
 
             obj.rightStepDcmOffsetMax = 1;
@@ -120,12 +120,12 @@ classdef adaptiveFoot
             end
         end
 
-        function obj = findOptimalFootPlacement(obj, Nsteps, xi, currentStanceFoot, currentStanceFootPosition, currentTime)
+        function obj = findOptimalFootPlacement(obj, Nsteps, xi, currentStanceFoot, currentStanceFootPosition, currentTime,ddxy_s)
             obj.leftoverTime=obj.stepDuration - mod(currentTime, obj.stepDuration);
             obj=obj.getStanceFootSequence(Nsteps, currentStanceFoot);
             obj.xiInitial = xi;
             obj.stanceFootInitial=currentStanceFootPosition;
-            dcmOffsetX = xi(1)-currentStanceFootPosition(1);
+            dcmOffsetX = xi(1)-currentStanceFootPosition(1) + 1/(obj.omega^2)*ddxy_s(1)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
             dcmOffsetY = xi(2)-currentStanceFootPosition(2);
             obj=obj.optimalLongitudinalFootPlacement(Nsteps, dcmOffsetX, currentStanceFootPosition(1));
             obj=obj.optimalLateralFootPlacement(Nsteps, dcmOffsetY, currentStanceFootPosition(2));
@@ -282,12 +282,9 @@ classdef adaptiveFoot
             rightFootSteadyState = -obj.stepWidthSteady/2;
             leftDCMSteady = -obj.dcmYSteady;
             rightDCMSteady = obj.dcmYSteady;
-            % objectiveFunction = (leftFoot-leftFootSteadyState)*(leftFoot-leftFootSteadyState)'...
-            %     +(rightFoot-rightFootSteadyState)*(rightFoot-rightFootSteadyState)'...
-            %     + (leftDCM-leftDCMSteady)*(leftDCM-leftDCMSteady)' + (rightDCM-rightDCMSteady)*(rightDCM-rightDCMSteady)';
-            objectiveFunction = (leftFoot(1)-leftFootSteadyState)*(leftFoot(1)-leftFootSteadyState)'...
-                +0*(rightFoot(1)-rightFootSteadyState)*(rightFoot(1)-rightFootSteadyState)'...
-                + (leftDCM-leftDCMSteady)*(leftDCM-leftDCMSteady)' + (rightDCM-rightDCMSteady)*(rightDCM-rightDCMSteady)'...
+            objectiveFunction = 3*(leftFoot-leftFootSteadyState)*(leftFoot-leftFootSteadyState)'...
+                +3*(rightFoot-rightFootSteadyState)*(rightFoot-rightFootSteadyState)'...
+                + 0*(leftDCM-leftDCMSteady)*(leftDCM-leftDCMSteady)' + 0*(rightDCM-rightDCMSteady)*(rightDCM-rightDCMSteady)'...
                 + (leftwidth-obj.stepWidthSteady)*(leftwidth-obj.stepWidthSteady)' + (rightwidth-obj.stepWidthSteady)*(rightwidth-obj.stepWidthSteady)';
             % equality constraint
             deltaT = obj.deltaTransformation(obj.stepDuration);

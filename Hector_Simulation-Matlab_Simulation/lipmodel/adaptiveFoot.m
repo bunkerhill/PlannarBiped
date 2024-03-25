@@ -81,18 +81,18 @@ classdef adaptiveFoot
             obj.dcmXSteady = obj.stepLengthSteady/(1/obj.deltaTransformation(obj.stepDuration) -1);
             obj.dcmYSteady = obj.stepWidthSteady/(1/obj.deltaTransformation(obj.stepDuration) +1);
             % set constraints
-            obj.leftStepWidthMax=0.4;
-            obj.leftStepWidthMin=0.1;
-            obj.rightStepWidthMax=-0.1;
-            obj.rightStepWidthMin=-0.4;
+            obj.leftStepWidthMax=0.6;
+            obj.leftStepWidthMin=0.0;
+            obj.rightStepWidthMax=-0.0;
+            obj.rightStepWidthMin=-0.6;
 
             obj.rightStepDcmOffsetMax = 1;
             obj.rightStepDcmOffsetMin = 0;
             obj.leftStepDcmOffsetMax = 0;
             obj.leftStepDcmOffsetMin= -1;
 
-            obj.stepLengthMax=0.18; %m
-            obj.stepLengthMin=-0.18;
+            obj.stepLengthMax=0.3; %m
+            obj.stepLengthMin=-0.3;
             obj.longitudinalDCMOffsetMax=1;
             obj.longitudinalDCMOffsetMin=-1;
         end
@@ -120,13 +120,13 @@ classdef adaptiveFoot
             end
         end
 
-        function obj = findOptimalFootPlacement(obj, Nsteps, xi, currentStanceFoot, currentStanceFootPosition, currentTime)
+        function obj = findOptimalFootPlacement(obj, Nsteps, xi, currentStanceFoot, currentStanceFootPosition, currentTime,ddxy_s)
             obj.leftoverTime=obj.stepDuration - mod(currentTime, obj.stepDuration);
             obj=obj.getStanceFootSequence(Nsteps, currentStanceFoot);
             obj.xiInitial = xi;
             obj.stanceFootInitial=currentStanceFootPosition;
-            dcmOffsetX = xi(1)-currentStanceFootPosition(1);
-            dcmOffsetY = xi(2)-currentStanceFootPosition(2);
+            dcmOffsetX = xi(1)-currentStanceFootPosition(1) + 1/(obj.omega^2)*ddxy_s(1)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
+            dcmOffsetY = xi(2)-currentStanceFootPosition(2) + 1/(obj.omega^2)*ddxy_s(2)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
             obj=obj.optimalLongitudinalFootPlacement(Nsteps, dcmOffsetX, currentStanceFootPosition(1));
             obj=obj.optimalLateralFootPlacement(Nsteps, dcmOffsetY, currentStanceFootPosition(2));
             obj.stanceFootConstraint = struct;

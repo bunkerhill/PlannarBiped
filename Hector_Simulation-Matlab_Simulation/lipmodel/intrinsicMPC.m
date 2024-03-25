@@ -71,7 +71,7 @@ classdef intrinsicMPC
         
         
         % solve the mpc problem
-        function obj = MPC(obj,xi,p_z, currentTime, stanceConstraint)
+        function obj = MPC(obj,xi,p_z, currentTime, stanceConstraint,ddxy_s)
             
             obj.currentTime=currentTime;
             obj.stanceConstraint = stanceConstraint;
@@ -90,10 +90,10 @@ classdef intrinsicMPC
             end
             Aeq1 = (1-lamda)/omega/(1-lamda^obj.vectorLength)*b_T;
             Aeq = blkdiag(Aeq1,Aeq1);
-            % beq = [x(1)+x(2)/omega-p_z(1)+1/(omega^2)*ddxy_s(1)*(exp(-omega*obj.T_h)-1);
-            %        x(3)+x(4)/omega-p_z(2)+1/(omega^2)*ddxy_s(2)*(exp(-omega*obj.T_h)-1)];
-            beq = [xi(1)-p_z(1);
-                   xi(2)-p_z(2)];
+            beq = [xi(1)-p_z(1)+1/(omega^2)*ddxy_s(1)*(exp(-omega*obj.T_h)-1);
+                   xi(2)-p_z(2)+1/(omega^2)*ddxy_s(2)*(exp(-omega*obj.T_h)-1)];
+            % beq = [xi(1)-p_z(1);
+            %        xi(2)-p_z(2)];
 
             % control constraint
             lb = []; 

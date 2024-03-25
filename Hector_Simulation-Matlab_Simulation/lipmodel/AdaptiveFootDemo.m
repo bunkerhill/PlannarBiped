@@ -32,7 +32,7 @@ for i=1:300
     end
     currentTime=0.01*i;
     timeVector=[timeVector, currentTime];
-    footPlanner=footPlanner.findOptimalFootPlacement(Nsteps,xi,currentStanceFootID,currentStanceFootPosition,currentTime);
+    footPlanner=footPlanner.findOptimalFootPlacement(Nsteps,xi,currentStanceFootID,currentStanceFootPosition,currentTime,[1;0]);
     xiVector=[xiVector, xi];
     comVector=[comVector x_com];
     % footPlanner.drawOptimalFootPlacement()
@@ -40,16 +40,17 @@ for i=1:300
     footHalfWidth=0.01;
     zmpController = intrinsicMPC(comHeight, footHalfLength, footHalfWidth);
     zmpVector=[zmpVector, currentZMP];
-    zmpController = zmpController.MPC(xi, currentZMP, currentTime, footPlanner.stanceFootConstraint);
+    zmpController = zmpController.MPC(xi, currentZMP, currentTime, footPlanner.stanceFootConstraint,[1;0]);
     % zmpController.drawZMPPreviewAndConstraint()
     % footPlanner.drawPeriodicGait(5)
     optimalZMP = zmpController.getOptimalZMP();
-    x_com = lip_dynamics(x_com,currentStanceFootPosition,[0;0],0.01,comHeight,g);
+    x_com = lip_dynamics(x_com,currentStanceFootPosition,[1;0],0.01,comHeight,g);
     xi(1)=x_com(1)+x_com(2)/omega;
     xi(2)=x_com(3)+x_com(4)/omega;
     % xi(1)=(xi(1)-optimalZMP(1))*exp(omega*0.01)+optimalZMP(1);
     % xi(2)=(xi(2)-optimalZMP(2))*exp(omega*0.01)+optimalZMP(2);
-    currentZMP=currentStanceFootPosition;
+    % currentZMP=currentStanceFootPosition;
+    currentZMP=optimalZMP;
 end
 % footPlanner.drawOptimalFootPlacement()
 % zmpController.drawZMPPreviewAndConstraint()

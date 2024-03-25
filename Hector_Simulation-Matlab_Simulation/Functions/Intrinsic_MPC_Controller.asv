@@ -50,7 +50,7 @@ dT = 0.008; % control period (every 8ms run this code once)
 % contingency MPC, only care about x-y plane motion
 L = 0.525; % the height of COM
 
-% surface motion
+% surface position
 xy_s = [moving_xy(1);moving_xy(4)];
 dxy_s = [moving_xy(2);moving_xy(5)];
 xy_s_com = [moving_xy(1);moving_xy(2);moving_xy(4);moving_xy(5)];
@@ -94,10 +94,10 @@ xy_com=[x(4);x(10);x(5);x(11)]-[moving_xy(1);moving_xy(2);moving_xy(4);moving_xy
 % end
 
 %%% draw foot placement
-if rem(k,5) ~= last_point && last_point == 0
-    footPlanner.drawOptimalFootPlacement();
-end
-last_point = rem(k,5);
+% if rem(k,5) ~= last_point && last_point == 0
+%     footPlanner.drawOptimalFootPlacement();
+% end
+% last_point = rem(k,5);
 
     
 
@@ -140,7 +140,7 @@ omega=sqrt(g/comHeight);
 xi = com_x + com_dx/omega;
 currentZMP = [current_zmp_x;current_zmp_y];
 currentTime = global_t;
-zmpController = zmpController.MPC(xi, currentZMP, currentTime, footPlanner.stanceFootConstraint,ddxy_s);
+zmpController = zmpController.MPC(xi, currentZMP, currentTime, footPlanner.stanceFootConstraint);
 % u_zmp_dot = MPC_controller.MPC(xy_com,x_z,ddxy_s,current_zmp_x,current_zmp_y,next_zmp_x,next_zmp_y);% get zmp velocity from Contingency MPC  %%% u_zmp 
 % MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
 % u_zmp = x_z + dT * u_zmp_dot; % integrate the zmp position  %%% x_z -> u_zmp

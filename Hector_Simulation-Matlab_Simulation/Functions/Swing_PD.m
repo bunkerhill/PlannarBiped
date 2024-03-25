@@ -21,8 +21,6 @@ RPY=x(1:3); % Roll Pitch Yaw
 x_act=x(4:6); % CoM position
 w_act=x(7:9); % Angular velocity
 v_act=x(10:12); % CoM velocity
-com_x = x(4:5); % CoM position
-com_dx = x(10:11); % CoM velocity
 
 % Feedback term coefficient
 % (rough approximation, actual COM is lower than xdes(6))
@@ -32,8 +30,16 @@ K_step = 0.13;
 dt = dt_MPC;
 gaitcycle = dt_MPC*10;
 
-dx_s = moving_xy(2);
-dy_s = moving_xy(5);
+% surface motion
+xy_s = [moving_xy(1);moving_xy(4)];
+dxy_s = [moving_xy(2);moving_xy(5)];
+xy_s_com = [moving_xy(1);moving_xy(2);moving_xy(4);moving_xy(5)];
+% ddxy_s = [0;0]; % suppose the ground surface is not moving
+ddxy_s = [moving_xy(3);moving_xy(6)];
+
+% center of mass motion in surface frame
+com_x = x(4:5)-xy_s; % CoM position
+com_dx = x(10:11)-dxy_s; % CoM velocity
 
 vx_des = xdes(10); % CoM desired vel
 vy_des = xdes(11);
@@ -134,10 +140,10 @@ r=0.047+width;
 % fx_end_L = p_hip_L_w(1)+(delta_t+delta_t2)/2*(vx_act-wz_act*r*cos(eul(3)))/2+K_step*(vx_act-vx_des);
 % fy_end_L = p_hip_L_w(2)+(delta_t+delta_t2)/2*(vy_act-wz_act*r*sin(eul(3)))/2+K_step*(vy_act-vy_des);
 
-fx_end_R = next_footHold(1);
-fy_end_R = next_footHold(2);
-fx_end_L = next_footHold(1);
-fy_end_L = next_footHold(2);
+fx_end_R = next_footHold(1)+xy_s(1);
+fy_end_R = next_footHold(2)+xy_s(2);
+fx_end_L = next_footHold(1)+xy_s(1);
+fy_end_L = next_footHold(2)+xy_s(2);
 
 fx_des_R=(t_halfcycle/delta_t)*(fx_end_R-stand_position(1,1))+stand_position(1,1);
 fy_des_R=(t_halfcycle/delta_t)*(fy_end_R-stand_position(2,1))+stand_position(2,1);
