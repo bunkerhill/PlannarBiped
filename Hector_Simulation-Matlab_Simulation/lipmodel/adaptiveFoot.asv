@@ -64,10 +64,18 @@ classdef adaptiveFoot
 
         % stance foot constraint used by ZMP MPC
         stanceFootConstraint
+
+        % contingency parameters
+        j_max
+        j_min
+        a_max
+        a_min
+        T_u
+        T_l
     end
     
     methods
-        function obj = adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth)
+        function obj = adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth, ddxy_s_max_in, ddxy_s_min_in)
             %ADAPTIVEFOOT Construct an instance of this class
             %   Detailed explanation goes here
             obj.g = 9.8; % m/s^2
@@ -81,20 +89,28 @@ classdef adaptiveFoot
             obj.dcmXSteady = obj.stepLengthSteady/(1/obj.deltaTransformation(obj.stepDuration) -1);
             obj.dcmYSteady = obj.stepWidthSteady/(1/obj.deltaTransformation(obj.stepDuration) +1);
             % set constraints
-            obj.leftStepWidthMax=0.4;
+            % y
+            obj.leftStepWidthMax=0.6;
             obj.leftStepWidthMin=0.0;
             obj.rightStepWidthMax=-0.0;
-            obj.rightStepWidthMin=-0.4;
-
+            obj.rightStepWidthMin=-0.6;
+            % x
+            obj.stepLengthMax=0.3; %m
+            obj.stepLengthMin=-0.3;
+            % y
             obj.rightStepDcmOffsetMax = 1;
             obj.rightStepDcmOffsetMin = 0;
             obj.leftStepDcmOffsetMax = 0;
             obj.leftStepDcmOffsetMin= -1;
-
-            obj.stepLengthMax=0.18; %m
-            obj.stepLengthMin=-0.18;
+            % x
             obj.longitudinalDCMOffsetMax=1;
             obj.longitudinalDCMOffsetMin=-1;
+
+            % contingency parameters
+            obj.j_max = [1,2];
+            obj.j_min = [-1,-2];
+            obj.a_max = ddxy_s_max_in;
+            obj.a_min = ddxy_s_min_in;
         end
         
         function outputArg = deltaTransformation(obj,timeDuration)
@@ -121,12 +137,22 @@ classdef adaptiveFoot
         end
 
         function obj = findOptimalFootPlacement(obj, Nsteps, xi, currentStanceFoot, currentStanceFootPosition, currentTime,ddxy_s)
+            
+            obj.T_u(1) = (obj.a_max(1)-ddxy_s(1))/obj.j_max(1);
+            obj.T_u(2) = (obj.a_max(2)-ddxy_s(2))/obj.j_max(2);
+            obj.T_l(1) = (obj.a_min(1)-ddxy_s(1))/obj.j_min(1);
+            obj.T_l(2) = (obj.a_min(2)-ddxy_s(2))/obj.j_min(2);
+            
             obj.leftoverTime=obj.stepDuration - mod(currentTime, obj.stepDuration);
             obj=obj.getStanceFootSequence(Nsteps, currentStanceFoot);
             obj.xiInitial = xi;
             obj.stanceFootInitial=currentStanceFootPosition;
-            dcmOffsetX = xi(1)-currentStanceFootPosition(1) + 1/(obj.omega^2)*ddxy_s(1)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
-            dcmOffsetY = xi(2)-currentStanceFootPosition(2);
+            % dcmOffsetX = xi(1)-currentStanceFootPosition(1) + 1/(obj.omega^2)*ddxy_s(1)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
+            % dcmOffsetY = xi(2)-currentStanceFootPosition(2) + 1/(obj.omega^2)*ddxy_s(2)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
+            dcmOffsetX = [xi(1)-currentStanceFootPosition(1) - 1/(obj.omega^2)*( ddxy_s(1)*(1-exp(-obj.omega*obj.T_u(1))) + obj.a_max(1)*exp(-obj.omega*obj.T_u(1))) - 1/(obj.omega^3)*obj.j_max(1)*(1-(1+obj.T_u(1)*obj.omega)*exp(-obj.omega*obj.T_u(1)));
+                          xi(1)-currentStanceFootPosition(1) - 1/(obj.omega^2)*( ddxy_s(1)*(1-exp(-obj.omega*obj.T_l(1))) + obj.a_min(1)*exp(-obj.omega*obj.T_l(1))) - 1/(obj.omega^3)*obj.j_min(1)*(1-(1+obj.T_l(1)*obj.omega)*exp(-obj.omega*obj.T_l(1)))];
+            dcmOffsetY = [xi(2)-currentStanceFootPosition(2) - 1/(obj.omega^2)*( ddxy_s(2)*(1-exp(-obj.omega*obj.T_u(2))) + obj.a_max(2)*exp(-obj.omega*obj.T_u(2))) - 1/(obj.omega^3)*obj.j_max(2)*(1-(1+obj.T_u(2)*obj.omega)*exp(-obj.omega*obj.T_u(2)));
+                          xi(2)-currentStanceFootPosition(2) - 1/(obj.omega^2)*( ddxy_s(2)*(1-exp(-obj.omega*obj.T_l(2))) + obj.a_min(2)*exp(-obj.omega*obj.T_l(2))) - 1/(obj.omega^3)*obj.j_min(2)*(1-(1+obj.T_l(2)*obj.omega)*exp(-obj.omega*obj.T_l(2)))];
             obj=obj.optimalLongitudinalFootPlacement(Nsteps, dcmOffsetX, currentStanceFootPosition(1));
             obj=obj.optimalLateralFootPlacement(Nsteps, dcmOffsetY, currentStanceFootPosition(2));
             obj.stanceFootConstraint = struct;
@@ -193,9 +219,9 @@ classdef adaptiveFoot
         function obj = optimalLongitudinalFootPlacement(obj, Nsteps, xdcm, currentStanceFootPosition)
             import casadi.*
             % longitudinal dcm offset
-            b = SX.sym('b', Nsteps);
+            b = SX.sym('b', 2*Nsteps);
             % longitudinal foot placement
-            s = SX.sym('s', Nsteps);
+            s = SX.sym('s', 2*Nsteps);
             leftFoot=[];
             rightFoot=[];
             stanceFootPosition=currentStanceFootPosition;
@@ -213,8 +239,12 @@ classdef adaptiveFoot
             % equality constraints
             deltaT = obj.deltaTransformation(obj.stepDuration);
             deltaTLeftover = obj.deltaTransformation(obj.leftoverTime);
-            g=deltaTLeftover*(s(1)+b(1)) - xdcm;
+            g=deltaTLeftover*(s(1)+b(1)) - xdcm(1);
             for i=2:Nsteps
+                g=[g; deltaT*(s(i)+b(i))-b(i-1)];
+            end
+            g=[g; deltaTLeftover*(s(1)+b(1)) - xdcm(1)];
+            for i=Nsteps+2:2*Nsteps
                 g=[g; deltaT*(s(i)+b(i))-b(i-1)];
             end
             p=[];
@@ -284,7 +314,7 @@ classdef adaptiveFoot
             rightDCMSteady = obj.dcmYSteady;
             objectiveFunction = 3*(leftFoot-leftFootSteadyState)*(leftFoot-leftFootSteadyState)'...
                 +3*(rightFoot-rightFootSteadyState)*(rightFoot-rightFootSteadyState)'...
-                + 0*(leftDCM-leftDCMSteady)*(leftDCM-leftDCMSteady)' + 0*(rightDCM-rightDCMSteady)*(rightDCM-rightDCMSteady)'...
+                + 1*(leftDCM-leftDCMSteady)*(leftDCM-leftDCMSteady)' + 1*(rightDCM-rightDCMSteady)*(rightDCM-rightDCMSteady)'...
                 + (leftwidth-obj.stepWidthSteady)*(leftwidth-obj.stepWidthSteady)' + (rightwidth-obj.stepWidthSteady)*(rightwidth-obj.stepWidthSteady)';
             % equality constraint
             deltaT = obj.deltaTransformation(obj.stepDuration);

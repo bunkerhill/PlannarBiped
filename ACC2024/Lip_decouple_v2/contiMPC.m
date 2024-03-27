@@ -123,7 +123,7 @@ classdef contiMPC
 
             %----------------------------------------------------------------------------
 
-             % objective function
+            % objective function
             H = eye(2*vector_length);
 
             % equality constraint

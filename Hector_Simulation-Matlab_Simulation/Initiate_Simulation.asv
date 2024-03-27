@@ -24,13 +24,11 @@ Rightfoot = [0;0];
 com_x = [0;0];
 com_dx = [0;0];
 next_footHold = [0;0];
-ddxy_s_max = [15;15];
-ddxy_s_min = [-15;-15];
-footPlanner=adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth, ddxy_s_max, ddxy_s_min);
+footPlanner=adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth, ddxy_s_max_in, ddxy_s_min_in);
 %% intrinsic mpc
 footHalfLength=0.06;
 footHalfWidth=0.01;
-zmpController = contingencyMPC(comHeight, footHalfLength, footHalfWidth, ddxy_s_max, ddxy_s_min);
+zmpController = intrinsicMPC(comHeight, footHalfLength, footHalfWidth);
 %%
 % set rand
 % a = -10;

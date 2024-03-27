@@ -75,7 +75,7 @@ classdef adaptiveFoot
     end
     
     methods
-        function obj = adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth, ddxy_s_max_in, ddxy_s_min_in)
+        function obj = adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth)
             %ADAPTIVEFOOT Construct an instance of this class
             %   Detailed explanation goes here
             obj.g = 9.8; % m/s^2
@@ -105,12 +105,6 @@ classdef adaptiveFoot
             % x
             obj.longitudinalDCMOffsetMax=1;
             obj.longitudinalDCMOffsetMin=-1;
-
-            % contingency parameters
-            obj.j_max = [1,2];
-            obj.j_min = [-1,-2];
-            obj.a_max = ddxy_s_max_in;
-            obj.a_min = ddxy_s_min_in;
         end
         
         function outputArg = deltaTransformation(obj,timeDuration)
@@ -137,22 +131,14 @@ classdef adaptiveFoot
         end
 
         function obj = findOptimalFootPlacement(obj, Nsteps, xi, currentStanceFoot, currentStanceFootPosition, currentTime,ddxy_s)
-            
-            obj.T_u(1) = (obj.a_max(1)-ddxy_s(1))/obj.j_max(1);
-            obj.T_u(2) = (obj.a_max(2)-ddxy_s(2))/obj.j_max(2);
-            obj.T_l(1) = (obj.a_min(1)-ddxy_s(1))/obj.j_min(1);
-            obj.T_l(2) = (obj.a_min(2)-ddxy_s(2))/obj.j_min(2);
-            
             obj.leftoverTime=obj.stepDuration - mod(currentTime, obj.stepDuration);
             obj=obj.getStanceFootSequence(Nsteps, currentStanceFoot);
             obj.xiInitial = xi;
             obj.stanceFootInitial=currentStanceFootPosition;
             % dcmOffsetX = xi(1)-currentStanceFootPosition(1) + 1/(obj.omega^2)*ddxy_s(1)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
             % dcmOffsetY = xi(2)-currentStanceFootPosition(2) + 1/(obj.omega^2)*ddxy_s(2)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
-            dcmOffsetX = [xi(1)-currentStanceFootPosition(1) - 1/(obj.omega^2)*( ddxy_s(1)*(1-exp(-obj.omega*obj.T_u(1))) + obj.a_max(1)*exp(-obj.omega*obj.T_u(1))) - 1/(obj.omega^3)*obj.j_max(1)*(1-(1+obj.T_u(1)*obj.omega)*exp(-obj.omega*obj.T_u(1)));
-                          xi(1)-currentStanceFootPosition(1) - 1/(obj.omega^2)*( ddxy_s(1)*(1-exp(-obj.omega*obj.T_l(1))) + obj.a_min(1)*exp(-obj.omega*obj.T_l(1))) - 1/(obj.omega^3)*obj.j_min(1)*(1-(1+obj.T_l(1)*obj.omega)*exp(-obj.omega*obj.T_l(1)))];
-            dcmOffsetY = [xi(2)-currentStanceFootPosition(2) - 1/(obj.omega^2)*( ddxy_s(2)*(1-exp(-obj.omega*obj.T_u(2))) + obj.a_max(2)*exp(-obj.omega*obj.T_u(2))) - 1/(obj.omega^3)*obj.j_max(2)*(1-(1+obj.T_u(2)*obj.omega)*exp(-obj.omega*obj.T_u(2)));
-                          xi(2)-currentStanceFootPosition(2) - 1/(obj.omega^2)*( ddxy_s(2)*(1-exp(-obj.omega*obj.T_l(2))) + obj.a_min(2)*exp(-obj.omega*obj.T_l(2))) - 1/(obj.omega^3)*obj.j_min(2)*(1-(1+obj.T_l(2)*obj.omega)*exp(-obj.omega*obj.T_l(2)))];
+            dcmOffsetX = xi(1)-currentStanceFootPosition(1) - 1/(obj.omega^2)*ddxy_s(1);
+            dcmOffsetY = xi(2)-currentStanceFootPosition(2) - 1/(obj.omega^2)*ddxy_s(2);
             obj=obj.optimalLongitudinalFootPlacement(Nsteps, dcmOffsetX, currentStanceFootPosition(1));
             obj=obj.optimalLateralFootPlacement(Nsteps, dcmOffsetY, currentStanceFootPosition(2));
             obj.stanceFootConstraint = struct;
@@ -219,9 +205,9 @@ classdef adaptiveFoot
         function obj = optimalLongitudinalFootPlacement(obj, Nsteps, xdcm, currentStanceFootPosition)
             import casadi.*
             % longitudinal dcm offset
-            b = SX.sym('b', 2*Nsteps);
+            b = SX.sym('b', Nsteps);
             % longitudinal foot placement
-            s = SX.sym('s', 2*Nsteps);
+            s = SX.sym('s', Nsteps);
             leftFoot=[];
             rightFoot=[];
             stanceFootPosition=currentStanceFootPosition;
@@ -239,15 +225,10 @@ classdef adaptiveFoot
             % equality constraints
             deltaT = obj.deltaTransformation(obj.stepDuration);
             deltaTLeftover = obj.deltaTransformation(obj.leftoverTime);
-            g=deltaTLeftover*(s(1)+b(1)) - xdcm(1);
+            g=deltaTLeftover*(s(1)+b(1)) - xdcm;
             for i=2:Nsteps
                 g=[g; deltaT*(s(i)+b(i))-b(i-1)];
             end
-            g=[g; deltaTLeftover*(s(Nsteps+1)+b(Nsteps+1)) - xdcm(2)];
-            for i=Nsteps+2:2*Nsteps
-                g=[g; deltaT*(s(i)+b(i))-b(i-1)];
-            end
-            g=[g; s(1)-s(Nsteps+1)];
             p=[];
             % Decision variables are dcmOffset b and step width s.
             nlp_prob = struct('f', objectiveFunction, 'x', [b;s], 'g',g,'p',p);
