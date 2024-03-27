@@ -21,6 +21,6 @@ currentStanceFootPosition = foot;
 xi = com_x + com_dx/omega;% divergent component of motion x,y
 
 footPlanner = footPlanner.findOptimalFootPlacement(Nsteps,xi,currentStanceFootID,currentStanceFootPosition,currentTime,ddxy_s);
-next_footHold = [footPlanner.stanceFootConstraint.ankleX(2);footPlanner.stanceFootConstraint.ankleY(2)];
+next_footHold = [footPlanner.stanceFootConstraint.Up_ankleX(2);footPlanner.stanceFootConstraint.Up_ankleY(2)];
 
 end

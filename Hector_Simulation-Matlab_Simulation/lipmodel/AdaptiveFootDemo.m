@@ -1,9 +1,12 @@
 clear
 clc
-% close all
+close all
 set(groot, 'defaulttextinterpreter','latex')
 set(groot, 'defaultaxesticklabelinterpreter','latex')
 set(groot, 'defaultlegendinterpreter','latex')
+
+ddxy_s_max = [15;15];
+ddxy_s_min = [-15;-15];
 
 comHeight=0.525;% center of mass height
 stepDuration=0.2;%sec
@@ -12,7 +15,7 @@ stepWidth=0.2;%m
 g=9.8;%m/s^2
 omega=sqrt(g/comHeight);
 
-footPlanner=adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth);
+footPlanner=adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth, ddxy_s_max, ddxy_s_min);
 % obj.drawPeriodicGait(5);
 Nsteps=5; % number of steps that planner plans ahead
 currentStanceFootID=0; % 0 means left foot is stance foot. 1 means right foot is stance foot 
@@ -27,8 +30,10 @@ comVector=[];
 for i=1:300
     if mod(i,20) == 0
         % assume the swing leg end at desired second foot placement from footPlanner
-        currentStanceFootPosition = [footPlanner.stanceFootConstraint.ankleX(2);footPlanner.stanceFootConstraint.ankleY(2)];
+        currentStanceFootPosition = [footPlanner.stanceFootConstraint.Up_ankleX(2);footPlanner.stanceFootConstraint.Up_ankleY(2)];
         currentStanceFootID = mod(floor(i/20),2);
+        footPlanner.drawOptimalFootPlacement()
+        zmpController.drawZMPPreviewAndConstraint()
     end
     currentTime=0.01*i;
     timeVector=[timeVector, currentTime];
@@ -38,7 +43,7 @@ for i=1:300
     % footPlanner.drawOptimalFootPlacement()
     footHalfLength=0.06;
     footHalfWidth=0.01;
-    zmpController = intrinsicMPC(comHeight, footHalfLength, footHalfWidth);
+    zmpController = contingencyMPC(comHeight, footHalfLength, footHalfWidth, ddxy_s_max, ddxy_s_min);
     zmpVector=[zmpVector, currentZMP];
     zmpController = zmpController.MPC(xi, currentZMP, currentTime, footPlanner.stanceFootConstraint,[1;0]);
     % zmpController.drawZMPPreviewAndConstraint()

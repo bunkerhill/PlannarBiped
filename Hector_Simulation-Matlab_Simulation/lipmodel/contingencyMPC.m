@@ -37,10 +37,14 @@ classdef contingencyMPC
         previewTimeHorizon
 
         stanceConstraint
-        ZMPConstraintXMin
-        ZMPConstraintXMax
-        ZMPConstraintYMin
-        ZMPConstraintYMax
+        Up_ZMPConstraintXMin
+        Up_ZMPConstraintXMax
+        Up_ZMPConstraintYMin
+        Up_ZMPConstraintYMax
+        Low_ZMPConstraintXMin
+        Low_ZMPConstraintXMax
+        Low_ZMPConstraintYMin
+        Low_ZMPConstraintYMax
 
         ZMPXVelocity
         ZMPYVelocity
@@ -130,16 +134,10 @@ classdef contingencyMPC
                   -P];
             A = blkdiag(A1,A1);
 
-            b1 = [X_max-p*p_z(1);
-                 -(X_min-p*p_z(1))];
-            b = [b1;
-                 b1];
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            b = [obj.ZMPConstraintXMax-p*p_z(1);
-                 -(obj.ZMPConstraintXMin-p*p_z(1));
-                 obj.ZMPConstraintYMax-p*p_z(2);
-                 -(obj.ZMPConstraintYMin-p*p_z(2))];
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            b = [obj.Up_ZMPConstraintXMax-p*p_z(1);
+                 -(obj.Up_ZMPConstraintXMin-p*p_z(1));
+                 obj.Low_ZMPConstraintXMax-p*p_z(1);
+                 -(obj.Low_ZMPConstraintXMin-p*p_z(1))];
 
             options = optimset('Algorithm','interior-point-convex','Display','off');
 
@@ -162,7 +160,7 @@ classdef contingencyMPC
                 b_T(i) = lamda^(i-1);
             end
             Aeq1 = (1-lamda)/omega/(1-lamda^obj.vectorLength)*b_T;
-            beq1 = xi(1)-p_z(1);
+            beq1 = xi(2)-p_z(2);
 
             Aeq2 = zeros(1,2*obj.vectorLength);
             Aeq2(1,1) = 1;
@@ -185,16 +183,10 @@ classdef contingencyMPC
                   -P];
             A = blkdiag(A1,A1);
 
-            b1 = [X_max-p*p_z(1);
-                 -(X_min-p*p_z(1))];
-            b = [b1;
-                 b1];
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            b = [obj.ZMPConstraintXMax-p*p_z(1);
-                 -(obj.ZMPConstraintXMin-p*p_z(1));
-                 obj.ZMPConstraintYMax-p*p_z(2);
-                 -(obj.ZMPConstraintYMin-p*p_z(2))];
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            b = [obj.Up_ZMPConstraintYMax-p*p_z(2);
+                 -(obj.Up_ZMPConstraintYMin-p*p_z(2));
+                 obj.Low_ZMPConstraintYMax-p*p_z(2);
+                 -(obj.Low_ZMPConstraintYMin-p*p_z(2))];
             
             options = optimset('Algorithm','interior-point-convex','Display','off');
 
@@ -204,17 +196,23 @@ classdef contingencyMPC
                fprintf("---Y DIRECTION SOLUTION NOT FOUND---");
             end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            obj.ZMPXVelocity = Pz_dot(1:obj.vectorLength);
-            obj.ZMPYVelocity = Pz_dot(obj.vectorLength+1:end);
+           %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   preview zmp position  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            obj.ZMPXVelocity = Xz_dot;
+            obj.ZMPYVelocity = Yz_dot;
 
-            obj.previewZMPXPosition = zeros(obj.vectorLength,1);
-            obj.previewZMPYPosition = zeros(obj.vectorLength,1);
+            obj.previewZMPXPosition = zeros(2*obj.vectorLength,1);
+            obj.previewZMPYPosition = zeros(2*obj.vectorLength,1);
             obj.previewZMPXPosition(1)=p_z(1);
             obj.previewZMPYPosition(1)=p_z(2);
+            obj.previewZMPXPosition(obj.vectorLength+1)=p_z(1);
+            obj.previewZMPYPosition(obj.vectorLength+1)=p_z(2);
             for i=1:obj.vectorLength-1
+                % up
                 obj.previewZMPXPosition(i+1)=obj.previewZMPXPosition(i)+obj.delta*obj.ZMPXVelocity(i);
                 obj.previewZMPYPosition(i+1)=obj.previewZMPYPosition(i)+obj.delta*obj.ZMPYVelocity(i);
+                % low
+                obj.previewZMPXPosition(i+obj.vectorLength+1)=obj.previewZMPXPosition(obj.vectorLength+i)+obj.delta*obj.ZMPXVelocity(obj.vectorLength+i);
+                obj.previewZMPYPosition(i+obj.vectorLength+1)=obj.previewZMPYPosition(obj.vectorLength+i)+obj.delta*obj.ZMPYVelocity(obj.vectorLength+i);
             end
            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -222,38 +220,52 @@ classdef contingencyMPC
 
         % Generate ZMP constraint
         function obj = ZMPConstraintSampledFromFootPlacement(obj)
-            obj.ZMPConstraintXMax = zeros(obj.vectorLength, 1);
-            obj.ZMPConstraintXMin = zeros(obj.vectorLength, 1);
-            obj.ZMPConstraintYMax = zeros(obj.vectorLength, 1);
-            obj.ZMPConstraintYMin = zeros(obj.vectorLength, 1);
+            obj.Up_ZMPConstraintXMax = zeros(obj.vectorLength, 1);
+            obj.Up_ZMPConstraintXMin = zeros(obj.vectorLength, 1);
+            obj.Up_ZMPConstraintYMax = zeros(obj.vectorLength, 1);
+            obj.Up_ZMPConstraintYMin = zeros(obj.vectorLength, 1);
+            obj.Low_ZMPConstraintXMax = zeros(obj.vectorLength, 1);
+            obj.Low_ZMPConstraintXMin = zeros(obj.vectorLength, 1);
+            obj.Low_ZMPConstraintYMax = zeros(obj.vectorLength, 1);
+            obj.Low_ZMPConstraintYMin = zeros(obj.vectorLength, 1);
             for i=1:obj.vectorLength
                 stanceFootIndex=find(obj.previewTimeHorizon(i)>=obj.stanceConstraint.time,1,"last");
-                obj.ZMPConstraintXMax(i) = obj.stanceConstraint.ankleX(stanceFootIndex)+obj.footHalfLength;
-                obj.ZMPConstraintXMin(i) = obj.stanceConstraint.ankleX(stanceFootIndex)-obj.footHalfLength;
-                obj.ZMPConstraintYMax(i) = obj.stanceConstraint.ankleY(stanceFootIndex)+obj.footHalfWidth;
-                obj.ZMPConstraintYMin(i) = obj.stanceConstraint.ankleY(stanceFootIndex)-obj.footHalfWidth;
+                obj.Up_ZMPConstraintXMax(i) = obj.stanceConstraint.Up_ankleX(stanceFootIndex)+obj.footHalfLength;
+                obj.Up_ZMPConstraintXMin(i) = obj.stanceConstraint.Up_ankleX(stanceFootIndex)-obj.footHalfLength;
+                obj.Up_ZMPConstraintYMax(i) = obj.stanceConstraint.Up_ankleY(stanceFootIndex)+obj.footHalfWidth;
+                obj.Up_ZMPConstraintYMin(i) = obj.stanceConstraint.Up_ankleY(stanceFootIndex)-obj.footHalfWidth;
+                obj.Low_ZMPConstraintXMax(i) = obj.stanceConstraint.Low_ankleX(stanceFootIndex)+obj.footHalfLength;
+                obj.Low_ZMPConstraintXMin(i) = obj.stanceConstraint.Low_ankleX(stanceFootIndex)-obj.footHalfLength;
+                obj.Low_ZMPConstraintYMax(i) = obj.stanceConstraint.Low_ankleY(stanceFootIndex)+obj.footHalfWidth;
+                obj.Low_ZMPConstraintYMin(i) = obj.stanceConstraint.Low_ankleY(stanceFootIndex)-obj.footHalfWidth;
             end
         end
 
 
         function [] = drawZMPPreviewAndConstraint(obj)
-            figure, plot(obj.previewTimeHorizon, obj.ZMPConstraintXMax,'b.');
-            hold on,plot(obj.previewTimeHorizon, obj.ZMPConstraintXMin,'r.');
-            hold on,plot(obj.previewTimeHorizon, obj.previewZMPXPosition,'k.');
+            figure, plot(obj.previewTimeHorizon, obj.Up_ZMPConstraintXMax,'-');
+            hold on,plot(obj.previewTimeHorizon, obj.Up_ZMPConstraintXMin,'-');
+            hold on,plot(obj.previewTimeHorizon(1:end-1), obj.previewZMPXPosition(2:obj.vectorLength),'*-');
+            hold on,plot(obj.previewTimeHorizon, obj.Low_ZMPConstraintXMax,'--');
+            hold on,plot(obj.previewTimeHorizon, obj.Low_ZMPConstraintXMin,'--');
+            hold on,plot(obj.previewTimeHorizon(1:end-1), obj.previewZMPXPosition(obj.vectorLength+2:2*obj.vectorLength),'*--');
             xlabel("t(sec)");ylabel("x(m)")
-            legend("ZMP x constraint max", "ZMP x constraint min", "optimal ZMP x")
+            legend("ZMP up x constraint max", "ZMP up x constraint min", "optimal up ZMP x","ZMP low x constraint max", "ZMP low x constraint min", "optimal low ZMP x")
 
-            figure,plot(obj.previewTimeHorizon, obj.ZMPConstraintYMax,'b.');
-            hold on,plot(obj.previewTimeHorizon, obj.ZMPConstraintYMin,'r.');
-            hold on,plot(obj.previewTimeHorizon, obj.previewZMPYPosition,'k.');
+            figure,plot(obj.previewTimeHorizon, obj.Up_ZMPConstraintYMax,'-');
+            hold on,plot(obj.previewTimeHorizon, obj.Up_ZMPConstraintYMin,'-');
+            hold on,plot(obj.previewTimeHorizon(1:end-1), obj.previewZMPYPosition(2:obj.vectorLength),'*-');
+            hold on,plot(obj.previewTimeHorizon, obj.Low_ZMPConstraintYMax,'--');
+            hold on,plot(obj.previewTimeHorizon, obj.Low_ZMPConstraintYMin,'--');
+            hold on,plot(obj.previewTimeHorizon(1:end-1), obj.previewZMPYPosition(obj.vectorLength+2:2*obj.vectorLength),'*--');
             xlabel("t(sec)");ylabel("y(m)")
-            legend("ZMP y constraint max", "ZMP y constraint min", "optimal ZMP y")
+            legend("ZMP up y constraint max", "ZMP up y constraint min", "optimal up ZMP y", "ZMP low y constraint max", "ZMP low y constraint min", "optimal low ZMP y")
 
-            figure,plot(obj.previewZMPXPosition, obj.previewZMPYPosition);
-            hold on,plot(obj.previewZMPXPosition, obj.previewZMPYPosition,'.');
+            figure,plot(obj.previewZMPXPosition(1:obj.vectorLength), obj.previewZMPYPosition(1:obj.vectorLength),'*-');
+            hold on,plot(obj.previewZMPXPosition(obj.vectorLength+1:2*obj.vectorLength), obj.previewZMPYPosition(obj.vectorLength+1:2*obj.vectorLength),'*--');
             axis equal
             xlabel("x(m)");ylabel("y(m)")
-            legend("optimal ZMP")
+            legend("optimal up ZMP","optimal low ZMP")
             
         end
 
