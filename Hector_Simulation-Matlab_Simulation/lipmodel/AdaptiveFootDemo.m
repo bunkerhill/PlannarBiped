@@ -27,6 +27,18 @@ timeVector=[];
 xiVector=[];
 zmpVector=[];
 comVector=[];
+
+% moving surface
+Ax = 0.05;
+T_periodx = 1.6;
+Ay = 0;
+T_periody = 0.6;
+
+dx = Ax*2*pi/T_periodx;
+dy = Ay*2*pi/T_periody;
+x = 0;
+y = 0;
+
 for i=1:300
     if mod(i,20) == 0
         % assume the swing leg end at desired second foot placement from footPlanner
@@ -35,8 +47,15 @@ for i=1:300
         footPlanner.drawOptimalFootPlacement()
         zmpController.drawZMPPreviewAndConstraint()
     end
+
     currentTime=0.01*i;
     timeVector=[timeVector, currentTime];
+
+    % moving surface
+    ddx = -Ax*2*pi/T_periodx*2*pi/T_periodx*sin(currentTime*2*pi/T_periodx);
+    ddy = -Ay*2*pi/T_periody*2*pi/T_periody*sin(currentTime*2*pi/T_periody);
+    ddxy_s = [ddx;ddy];
+
     footPlanner=footPlanner.findOptimalFootPlacement(Nsteps,xi,currentStanceFootID,currentStanceFootPosition,currentTime,[1;0]);
     xiVector=[xiVector, xi];
     comVector=[comVector x_com];
@@ -45,11 +64,11 @@ for i=1:300
     footHalfWidth=0.01;
     zmpController = contingencyMPC(comHeight, footHalfLength, footHalfWidth, ddxy_s_max, ddxy_s_min);
     zmpVector=[zmpVector, currentZMP];
-    zmpController = zmpController.MPC(xi, currentZMP, currentTime, footPlanner.stanceFootConstraint,[1;0]);
+    zmpController = zmpController.MPC(xi, currentZMP, currentTime, footPlanner.stanceFootConstraint,ddxy_s);
     % zmpController.drawZMPPreviewAndConstraint()
     % footPlanner.drawPeriodicGait(5)
     optimalZMP = zmpController.getOptimalZMP();
-    x_com = lip_dynamics(x_com,currentStanceFootPosition,[1;0],0.01,comHeight,g);
+    x_com = lip_dynamics(x_com,currentStanceFootPosition,ddxy_s,0.01,comHeight,g);
     xi(1)=x_com(1)+x_com(2)/omega;
     xi(2)=x_com(3)+x_com(4)/omega;
     % xi(1)=(xi(1)-optimalZMP(1))*exp(omega*0.01)+optimalZMP(1);

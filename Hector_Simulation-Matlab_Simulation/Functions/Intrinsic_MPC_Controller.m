@@ -94,13 +94,13 @@ xy_com=[x(4);x(10);x(5);x(11)]-[moving_xy(1);moving_xy(2);moving_xy(4);moving_xy
 % end
 
 %%% draw foot placement
-if rem(k,5) ~= last_point && last_point == 0
-    footPlanner.drawOptimalFootPlacement();
-end
-last_point = rem(k,5);
+% if rem(k,5) ~= last_point && last_point == 0
+%     footPlanner.drawOptimalFootPlacement();
+% end
+% last_point = rem(k,5);
 
     
-
+% footPlanner.drawOptimalFootPlacement();
 
 % get important data(predicted zmp and actual zmp)
 if (i_gait==0) % R stance

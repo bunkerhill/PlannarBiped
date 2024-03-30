@@ -56,8 +56,8 @@ fpR = fpfv(1:3); % foot pos
 fpL = fpfv(7:9);
 fvR = fpfv(4:6); % foot vel
 fvL = fpfv(10:12);
-Rightfoot = fpfv(1:2); % foot pos xy
-Leftfoot = fpfv(7:8); % foot pos xy
+Rightfoot = fpfv(1:2)-xy_s; % foot pos xy
+Leftfoot = fpfv(7:8)-xy_s; % foot pos xy
 %% Gait scheduler
 stage = floor((i_MPC_var-1)/5);
 ii = (stage)*5+1;

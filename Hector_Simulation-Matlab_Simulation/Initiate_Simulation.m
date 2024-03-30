@@ -1,4 +1,5 @@
 clear;
+close all
 %% HECTOR OPEN SOURCE SIMULATION SOFTWARE IN MATLAB/SIMULINK%%
 % PLEASE READ LICENSE AGREEMENT BEFORE PROCEEDING
 
@@ -43,10 +44,10 @@ zmpController = contingencyMPC(comHeight, footHalfLength, footHalfWidth, ddxy_s_
 % T_periodx = 0.6;
 % Ay = 0.1;
 % T_periody = 0.6;
-Ax = 0.1;
-T_periodx = 1.3;
-Ay = 0.05;
-T_periody = 2;
+Ax = 0;
+T_periodx = 0.6;
+Ay = 0.1;
+T_periody = 1.3;
 
 last_acc = [0;0];
 count = 1;
