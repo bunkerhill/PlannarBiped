@@ -262,6 +262,7 @@ GRFM = full(x_opt);
 GRFM = GRFM(1:12);
 % u=-contact_mapping*GRFM(1:12); 
 u=[GRFM(1:12)];
+ur = u
 disp('QPOASES-MPC Function Total Time:');
 toc
 end

@@ -1,6 +1,7 @@
 clear
 clc
 close all
+addpath(genpath("./casadi-3"))
 
 
 comHeight=0.525;% center of mass height
@@ -26,6 +27,10 @@ for i=1:10
     footPlanner=footPlanner.findOptimalFootPlacement(Nsteps,xi,currentStanceFootID,currentStanceFootPosition,currentTime);
     xiVector=[xiVector, xi];
     % footPlanner.drawOptimalFootPlacement()
+    % footPlanner.drawPeriodicGait(7)
+    footPlanner.stanceFootConstraint;
+
+    
     footHalfLength=0.06;
     footHalfWidth=0.01;
     zmpController = intrinsicMPC(comHeight, footHalfLength, footHalfWidth);
