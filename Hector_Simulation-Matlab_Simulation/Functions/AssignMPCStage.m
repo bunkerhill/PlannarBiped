@@ -34,8 +34,8 @@ dt = 0.0005;
 % count = count + 1;
 
 % sin curve
-ddx = -Ax*2*pi/T_periodx*2*pi/T_periodx*sin(t*2*pi/T_periodx);
-ddy = -Ay*2*pi/T_periody*2*pi/T_periody*sin(t*2*pi/T_periody);
+ddx = -Ax*2*pi/T_periodx*2*pi/T_periodx*sin(t*2*pi/T_periodx) -0.5;
+ddy = -Ay*2*pi/T_periody*2*pi/T_periody*sin(t*2*pi/T_periody) ;
 
 % ddx = ddx + ddxy_s(1);
 % ddy = ddy + ddxy_s(2);

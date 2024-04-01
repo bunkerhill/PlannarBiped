@@ -12,7 +12,7 @@ import casadi.*
 global Contact_Jacobian Rotm_foot MPC_controller x_z xy_com xy_com_act footprint xy_com_tank desire_traj last_u I_error u_zmp global_t u_zmp_tank x_z_tank moving_tank
 global ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L last_point moving_xy up_u low_u
 global X_min X_max Y_min Y_max stance_leg dx dy x y random count last_acc Ax Ay T_periodx T_periody
-global footPlanner zmpController next_footHold Leftfoot Rightfoot com_x com_dx footHoldVector
+global footPlanner zmpController next_footHold Leftfoot Rightfoot com_x com_dx footHoldVector direct_force_vector force_error_vector
 [Contact_Jacobian,Rotm_foot]=Formulate_Contact_Jacobian;
 
 %% adaptive foot placement planner
@@ -45,9 +45,9 @@ zmpController = contingencyMPC(comHeight, footHalfLength, footHalfWidth, ddxy_s_
 % Ay = 0.1;
 % T_periody = 0.6;
 Ax = 0;
-T_periodx = 0.6;
-Ay = 0.1;
-T_periody = 1.3;
+T_periodx = 1.5;
+Ay = 0;
+T_periody = 0.8;
 
 last_acc = [0;0];
 count = 1;
@@ -74,6 +74,8 @@ stance_leg = [];
 moving_tank = [];
 ddxyz_com_tank = [];
 footHoldVector = [];
+direct_force_vector = [];
+force_error_vector = [];
 p_xy_tank = [];
 fx_end_R = 0; 
 fx_end_L = 0;
@@ -83,10 +85,10 @@ last_point = 0;
 moving_xy = [0;0;0;0;0;0];
 up_u = [];
 low_u = [];
-dx = Ax*2*pi/T_periodx;
-dy = Ay*2*pi/T_periody;
-% dx = 0;
-% dy = 0;
+% dx = Ax*2*pi/T_periodx;
+% dy = Ay*2*pi/T_periody;
+dx = 0;
+dy = 0;
 x = 0;
 y = 0;
 %% General (sim world physics)

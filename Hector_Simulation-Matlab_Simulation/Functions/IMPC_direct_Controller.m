@@ -5,10 +5,15 @@ tic
 %% MPC Parameters
 global i_MPC_var dt_MPC_vec gait x_traj_IC I_error Contact_Jacobian Rotm_foot addArm last_u MPC_controller x_z xy_com xy_com_act footprint xy_com_tank i_gait u_zmp desire_traj global_t
 global u_zmp_tank x_z_tank ddxyz_com_tank p_xy_tank fx_end_R fx_end_L fy_end_R fy_end_L last_point up_u low_u moving_tank
-global X_min X_max Y_min Y_max moving_xy stance_leg zmpController footPlanner com_x com_dx next_footHold footHoldVector
+global X_min X_max Y_min Y_max moving_xy stance_leg zmpController footPlanner com_x com_dx next_footHold footHoldVector direct_force_vector force_error_vector
 k = i_MPC_var; % current horizon
+h = 10; % prediction horizons
 g = 9.81; % gravity
 
+%% QPOASES Parameters
+import casadi.*
+numVar = 12;
+numCons = 34;
 %% Making definition consistent with MPC
 % input definition
 %%%%%% All the variables below are in world frame %%%%%%
@@ -20,6 +25,18 @@ foot=uin(35:46); % contact position and velocity [p_L, v_L, p_R, v_R]'
 eul = x(1:3);
 eul_des = xdes(1:3);
 R = eul2rotm(flip(eul'));
+
+% enforce "2*pi=0" relation for turning
+% yaw_correction=0;
+% while yaw_correction==0
+%     if eul_des(3,1)-eul(3,1)>pi
+%         eul(3,1)=eul(3,1)+2*pi;
+%     elseif eul_des(3,1)-eul(3,1)<-pi
+%         eul(3,1)=eul(3,1)-2*pi;
+%     else
+%         yaw_correction=1;
+%     end
+% end
 
 %% Assigning desired trajectory for CoM and Foot locations
 
@@ -33,16 +50,31 @@ dT = 0.008; % control period (every 8ms run this code once)
 % contingency MPC, only care about x-y plane motion
 L = 0.525; % the height of COM
 
-% surface position
+% surface motion
 xy_s = [moving_xy(1);moving_xy(4)];
 dxy_s = [moving_xy(2);moving_xy(5)];
 xy_s_com = [moving_xy(1);moving_xy(2);moving_xy(4);moving_xy(5)];
 % ddxy_s = [0;0]; % suppose the ground surface is not moving
 ddxy_s = [moving_xy(3);moving_xy(6)];
 
+% if (MPC_controller.tim <= 0.2)
+%     x_z = (foot(1:2)+foot(7:8))/2;
+%     gait = 0;
+%     if (MPC_controller.tim <= 0.01)
+%         u_zmp = x_z;
+%     end
+% else
+%     gait = 1;
+%     if (i_gait==0) % R stance
+%         x_z = foot(1:2);
+%     else
+%         x_z = foot(7:8);
+%     end
+% end
 global_t
 
 % for the beginning of stand on two feet, xy_com is the same as initial actual com
+% u_zmp is in the middle of two feet
 if global_t==0
     xy_com=[x(4);x(10);x(5);x(11)];
     u_zmp = (foot(1:2)+foot(7:8))/2;
@@ -50,12 +82,25 @@ end
 
 % use real robot states
 xy_com=[x(4);x(10);x(5);x(11)]-[moving_xy(1);moving_xy(2);moving_xy(4);moving_xy(5)];
+% fresh to current com at a certain period time for first 0.2s
+% if global_t < 0.2
+% if rem(k,3) ~= last_point && last_point == 0
+%     xy_com=[x(4);x(10);x(5);x(11)];
+% end
+% last_point = rem(k,3);
+% else
+% xy_com=[x(4);x(10);x(5);x(11)]-[moving_xy(1);moving_xy(2);moving_xy(4);moving_xy(5)];
+% 
+% end
 
 %%% draw foot placement
 % if rem(k,5) ~= last_point && last_point == 0
 %     footPlanner.drawOptimalFootPlacement();
 % end
 % last_point = rem(k,5);
+
+    
+% footPlanner.drawOptimalFootPlacement();
 
 % get important data(predicted zmp and actual zmp)
 if (i_gait==0) % R stance
@@ -73,6 +118,21 @@ x_z_tank = [x_z_tank x_z];
 moving_tank = [moving_tank moving_xy];
 stance_leg = [stance_leg i_gait];
 footHoldVector = [footHoldVector next_footHold];
+% record CMPC horizon
+% up_u = [];
+% low_u = [];
+% [X_z_dot,X_min,X_max,Y_min,Y_max] = MPC_controller.MPC_horizon(xy_com,x_z,ddxy_s,current_zmp_x,current_zmp_y,next_zmp_x,next_zmp_y);
+% delta_t = 0.01;
+% x_z_up = x_z;
+% for j = 1:(length(X_z_dot)/2)
+%     x_z_up = x_z_up + delta_t * X_z_dot(j,:)';
+%     up_u = [up_u,x_z_up];
+% end
+% x_z_low = x_z;
+% for j = 1:(length(X_z_dot)/2)
+%     x_z_low = x_z_low + delta_t * X_z_dot(j+(length(X_z_dot)/2),:)';
+%     low_u = [low_u,x_z_low];
+% end
 
 comHeight=0.525;
 g=9.8;%m/s^2
@@ -80,18 +140,38 @@ omega=sqrt(g/comHeight);
 xi = com_x + com_dx/omega;
 currentZMP = [current_zmp_x;current_zmp_y];
 currentTime = global_t;
-zmpController = zmpController.MPC(xi, currentZMP, currentTime, footPlanner.stanceFootConstraint);
+zmpController = zmpController.MPC(xi, currentZMP, currentTime, footPlanner.stanceFootConstraint,ddxy_s);
+% u_zmp_dot = MPC_controller.MPC(xy_com,x_z,ddxy_s,current_zmp_x,current_zmp_y,next_zmp_x,next_zmp_y);% get zmp velocity from Contingency MPC  %%% u_zmp 
+% MPC_controller = MPC_controller.updatetime(dT);% every loop the controller add dT period
+% u_zmp = x_z + dT * u_zmp_dot; % integrate the zmp position  %%% x_z -> u_zmp
 u_zmp = zmpController.getOptimalZMP();
+
+%%%%%%%%%%%%%%  calculate force directly  %%%%%%%%%%%%%%%
+m = 5.75 + 2*(0.835+0.764+1.613+0.12+0.08);
+p = com_x - u_zmp;
+F = [0;0;m*g]+m*g/comHeight*[p;0];
+tau = skew([u_zmp-currentZMP;0])*F;
+tau(1) = 0;
+u_direct = zeros(12,1);
+if (i_gait==0) % R stance
+    u_direct(1:3) = F;
+    u_direct(7:9) = tau;
+else
+    u_direct(4:6) = F;
+    u_direct(10:12) = tau;
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% print
 % method 1
 ddxy_com = lip_dynamics(xy_com([1,3]),u_zmp,ddxy_s,L,g);% use continuous lip model to calculate COM acceleration
 ddxyz_com = [ddxy_com;0];
 % method 2
 xy_com = lip_dynamics_discrete(xy_com,u_zmp,ddxy_s,dT,L,g);
-
-% print
 xy_com_record = [xy_com(1);xy_com(3);xy_com(2);xy_com(4);ddxy_com];
 ddxyz_com_tank = [ddxyz_com_tank xy_com_record];
 u_zmp_tank = [u_zmp_tank u_zmp];
+direct_force_vector = [direct_force_vector u_direct];
 
 % ground reaction force optimization, only optimize to maintain z direction position and body orientation
 kp_p = diag([250 250 300]); % kp weight for COM position (x,y,z) respectively
@@ -152,25 +232,23 @@ R_foot_L=R_foot(4:6,:);
 I = R*Ib*R'; % MoI in world frame
 
 % continuous A & b:
-A=[eye(3), eye(3), zeros(3),zeros(3);
+A=[0,0,1,0,0,1,0,0,0,0,0,0;
     skew(-x(4:6,1) + foot_traj(1:3,1)), skew(-x(4:6,1) + foot_traj(4:6,1)), eye(3), eye(3)];
-b = [m*(p_cddot+[0;0;g]);
+b = [m*(p_cddot(3)+g);
     I*w_cddot];
 %% MPC Weights: (tune these according to your task)
 % state tracking objective:
-L = [100 0 0 0 0 0;
-     0 100 0 0 0 0;
-     0 0 130 0 0 0;
-     0 0 0 1000 0 0;
-     0 0 0 0 600 0;
-     0 0 0 0 0 600];
+L = [130 0 0 0;
+     0 1000 0 0;
+     0 0 600 0;
+     0 0 0 600];
 W = 0.001*eye(12);
-M = 1*eye(12);  
+M = 100*eye(12);  
 % L = eye(6);
 % control input minimization:
 % QP math:
 Hd = 2*(A'*L*A+W+M);
-fd = -2*(A'*L*b + M*last_u);  
+fd = -2*(A'*L*b + M*u_direct);  
 
 %% QP Constraints:
 % please refer to the quadprog constraint format: lbA <= A*u <= ubA
@@ -293,11 +371,63 @@ u=[GRFM(1:12)];
 % toc
 last_u = u;
 
+force_error_vector = [force_error_vector u-u_direct];
+
 
 end
 
 
 %% functions %%
+
+function foot_traj = Calc_foot_traj_3Dwalking(xdes,x_traj,foot,h,k,R)
+global dt_MPC_vec 
+i_MPC_gait = rem(k,h);
+
+foot_traj = zeros(6,h);
+%foot prediction: walking gait
+if 1 <= i_MPC_gait && i_MPC_gait <= 5 % stance sequence: R-L-R
+    current_R = foot(1:3); % current right foot - anchor foot
+    next_L = current_R + xdes(10)*dt_MPC_vec(k)*h/2;
+    next_R = next_L + xdes(10)*dt_MPC_vec(k+5)*h/2;
+    %phase 1: right foot anchoring (6-i_MPC_gait)
+    for i = 1:6-i_MPC_gait
+        foot_traj(4:6,i) = R*current_R;
+    end
+    %phase 2: next left foot anchoring (5)
+    for i = 7-i_MPC_gait:11-i_MPC_gait
+        foot_traj(1:3,i) = R*next_L;
+    end
+    %phase 3: next right foot anchoring (i_MPC-gait-1)
+    if i_MPC_gait>1
+        for i = 12-i_MPC_gait:h
+            foot_traj(4:6,i) = R*next_R;
+        end
+    end
+else % stance sequence: L-R-L
+    if i_MPC_gait == 0; i_MPC_gait = 10; end
+    i_MPC_gait = i_MPC_gait - h/2;
+    current_L = foot(1:3); % current left foot - anchor foot
+    next_R = current_L + n*xdes(10)*dt_MPC_vec(k)*h/2;
+    next_L = next_R + n*xdes(10)*dt_MPC_vec(k+5)*h/2;
+    %phase 1: left foot anchoring (6-i_MPC_gait)
+    for i = 1:6-i_MPC_gait
+        foot_traj(1:3,i) = R*current_L;
+    end
+    %phase 2: next right foot anchoring (5)
+    for i = 7-i_MPC_gait:11-i_MPC_gait
+        foot_traj(4:6,i) = R*next_R;
+    end
+    %phase 3: next left foot anchoring (i_MPC-gait-1)
+    if i_MPC_gait>1
+        for i = 12-i_MPC_gait:h
+            foot_traj(1:3,i) = R*next_L;
+        end
+    end
+end
+
+end
+
+
 function x_traj = Calc_x_traj(xdes,x,dt)
 
 for j = 1:6

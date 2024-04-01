@@ -135,10 +135,10 @@ r=0.047+width;
 % ref: Li, Junheng, and Quan Nguyen. "Dynamic Walking of Bipedal Robots
 % on Uneven Stepping Stones via Adaptive-Frequency MPC." IEEE Control
 % Systems Letters 7 (2023): 1279-1284.
-% fx_end_R = p_hip_R_w(1)+(delta_t+delta_t2)/2*(vx_act+wz_act*r*cos(eul(3)))/2+K_step*(vx_act-vx_des);
-% fy_end_R = p_hip_R_w(2)+(delta_t+delta_t2)/2*(vy_act+wz_act*r*sin(eul(3)))/2+K_step*(vy_act-vy_des);
-% fx_end_L = p_hip_L_w(1)+(delta_t+delta_t2)/2*(vx_act-wz_act*r*cos(eul(3)))/2+K_step*(vx_act-vx_des);
-% fy_end_L = p_hip_L_w(2)+(delta_t+delta_t2)/2*(vy_act-wz_act*r*sin(eul(3)))/2+K_step*(vy_act-vy_des);
+% fx_end_R = p_hip_R_w(1)+(delta_t+delta_t2)/2*(vx_act+wz_act*r*cos(eul(3)))/2+K_step*(vx_act-dxy_s(1)-vx_des);
+% fy_end_R = p_hip_R_w(2)+(delta_t+delta_t2)/2*(vy_act+wz_act*r*sin(eul(3)))/2+K_step*(vy_act-dxy_s(2)-vy_des);
+% fx_end_L = p_hip_L_w(1)+(delta_t+delta_t2)/2*(vx_act-wz_act*r*cos(eul(3)))/2+K_step*(vx_act-dxy_s(1)-vx_des);
+% fy_end_L = p_hip_L_w(2)+(delta_t+delta_t2)/2*(vy_act-wz_act*r*sin(eul(3)))/2+K_step*(vy_act-dxy_s(2)-vy_des);
 
 fx_end_R = next_footHold(1)+xy_s(1);
 fy_end_R = next_footHold(2)+xy_s(2);
@@ -196,14 +196,20 @@ tau2 = (Kp*(qL_des - q(6:10)) + Kd*(0 - qd(6:10))).*swing_schedule(2);
 %     fpR_des = [fx_des_R;fy_des_R;0];
 %     qR_des = foot_to_joint(fpR_des-x_act(1:3),q(1:5,1),Rotm,eul,feedback_ratio,1);
 %     tau1 = (5*(qR_des - q(1:5)) + Kd*(0 - qd(1:5)));
-%     % tau1(2) = -100*(0-RPY(1))-20*(0-w_act(1));
+%     % p = 1;d = 1;
+%     % tau1(1) = -p*(0-RPY(3))-d*(0-w_act(3));
+%     % tau1(2) = -p*(0-RPY(1))-d*(0-w_act(1));
+%     % tau1(3) = -p*(0-RPY(2))-d*(0-w_act(2));
 % end
 % if swing_schedule(2)==0
 %     tau1 = (Kp*(qR_des - q(1:5)) + Kd*(0 - qd(1:5)));
 %     fpL_des = [fx_des_L;fy_des_L;0];
 %     qL_des = foot_to_joint(fpL_des-x_act(1:3),q(6:10,1),Rotm,eul,feedback_ratio,-1);
 %     tau2 = (5*(qL_des - q(6:10)) + Kd*(0 - qd(6:10)));
-%     % tau2(2) = -100*(0-RPY(1))-20*(0-w_act(1));
+%     % p = 1;d = 1;
+%     % tau2(1) = -p*(0-RPY(3))-d*(0-w_act(3));
+%     % tau2(2) = -p*(0-RPY(1))-d*(0-w_act(1));
+%     % tau2(3) = -p*(0-RPY(2))-d*(0-w_act(2));
 % end
 
 tau = [tau1;tau2];

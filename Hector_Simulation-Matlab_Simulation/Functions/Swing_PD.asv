@@ -21,8 +21,6 @@ RPY=x(1:3); % Roll Pitch Yaw
 x_act=x(4:6); % CoM position
 w_act=x(7:9); % Angular velocity
 v_act=x(10:12); % CoM velocity
-com_x = x(4:5); % CoM position
-com_dx = x(10:11); % CoM velocity
 
 % Feedback term coefficient
 % (rough approximation, actual COM is lower than xdes(6))
@@ -32,8 +30,16 @@ K_step = 0.13;
 dt = dt_MPC;
 gaitcycle = dt_MPC*10;
 
-dx_s = moving_xy(2);
-dy_s = moving_xy(5);
+% surface motion
+xy_s = [moving_xy(1);moving_xy(4)];
+dxy_s = [moving_xy(2);moving_xy(5)];
+xy_s_com = [moving_xy(1);moving_xy(2);moving_xy(4);moving_xy(5)];
+% ddxy_s = [0;0]; % suppose the ground surface is not moving
+ddxy_s = [moving_xy(3);moving_xy(6)];
+
+% center of mass motion in surface frame
+com_x = x(4:5)-xy_s; % CoM position
+com_dx = x(10:11)-dxy_s; % CoM velocity
 
 vx_des = xdes(10); % CoM desired vel
 vy_des = xdes(11);
@@ -50,8 +56,8 @@ fpR = fpfv(1:3); % foot pos
 fpL = fpfv(7:9);
 fvR = fpfv(4:6); % foot vel
 fvL = fpfv(10:12);
-Rightfoot = fpfv(1:2); % foot pos xy
-Leftfoot = fpfv(7:8); % foot pos xy
+Rightfoot = fpfv(1:2)-xy_s; % foot pos xy
+Leftfoot = fpfv(7:8)-xy_s; % foot pos xy
 %% Gait scheduler
 stage = floor((i_MPC_var-1)/5);
 ii = (stage)*5+1;
@@ -129,15 +135,15 @@ r=0.047+width;
 % ref: Li, Junheng, and Quan Nguyen. "Dynamic Walking of Bipedal Robots
 % on Uneven Stepping Stones via Adaptive-Frequency MPC." IEEE Control
 % Systems Letters 7 (2023): 1279-1284.
-% fx_end_R = p_hip_R_w(1)+(delta_t+delta_t2)/2*(vx_act+wz_act*r*cos(eul(3)))/2+K_step*(vx_act-vx_des);
-% fy_end_R = p_hip_R_w(2)+(delta_t+delta_t2)/2*(vy_act+wz_act*r*sin(eul(3)))/2+K_step*(vy_act-vy_des);
-% fx_end_L = p_hip_L_w(1)+(delta_t+delta_t2)/2*(vx_act-wz_act*r*cos(eul(3)))/2+K_step*(vx_act-vx_des);
-% fy_end_L = p_hip_L_w(2)+(delta_t+delta_t2)/2*(vy_act-wz_act*r*sin(eul(3)))/2+K_step*(vy_act-vy_des);
+% fx_end_R = p_hip_R_w(1)+(delta_t+delta_t2)/2*(vx_act+wz_act*r*cos(eul(3)))/2+K_step*(vx_act-dxy_s(1)-vx_des);
+% fy_end_R = p_hip_R_w(2)+(delta_t+delta_t2)/2*(vy_act+wz_act*r*sin(eul(3)))/2+K_step*(vy_act-dxy_s(2)-vy_des);
+% fx_end_L = p_hip_L_w(1)+(delta_t+delta_t2)/2*(vx_act-wz_act*r*cos(eul(3)))/2+K_step*(vx_act-dxy_s(1)-vx_des);
+% fy_end_L = p_hip_L_w(2)+(delta_t+delta_t2)/2*(vy_act-wz_act*r*sin(eul(3)))/2+K_step*(vy_act-dxy_s(2)-vy_des);
 
-fx_end_R = next_footHold(1);
-fy_end_R = next_footHold(2);
-fx_end_L = next_footHold(1);
-fy_end_L = next_footHold(2);
+fx_end_R = next_footHold(1)+xy_s(1);
+fy_end_R = next_footHold(2)+xy_s(2);
+fx_end_L = next_footHold(1)+xy_s(1);
+fy_end_L = next_footHold(2)+xy_s(2);
 
 fx_des_R=(t_halfcycle/delta_t)*(fx_end_R-stand_position(1,1))+stand_position(1,1);
 fy_des_R=(t_halfcycle/delta_t)*(fy_end_R-stand_position(2,1))+stand_position(2,1);
@@ -181,24 +187,25 @@ qL_des = foot_to_joint(fpL_des-x_act(1:3),q(6:10,1),Rotm,eul,feedback_ratio,-1);
 Kp = diag([100 100 100 100 5]); Kd = diag([2 2 2 2 0.1]);
 
 % old strategy
-tau1 = (Kp*(qR_des - q(1:5)) + Kd*(0 - qd(1:5))).*swing_schedule(1);
-tau2 = (Kp*(qL_des - q(6:10)) + Kd*(0 - qd(6:10))).*swing_schedule(2);
+% tau1 = (Kp*(qR_des - q(1:5)) + Kd*(0 - qd(1:5))).*swing_schedule(1);
+% tau2 = (Kp*(qL_des - q(6:10)) + Kd*(0 - qd(6:10))).*swing_schedule(2);
 
 % new strategy
-% if swing_schedule(1)==0 % left leg swings
-%     tau2 = (Kp*(qL_des - q(6:10)) + Kd*(0 - qd(6:10)));
-%     fpR_des = [fx_des_R;fy_des_R;0];
-%     qR_des = foot_to_joint(fpR_des-x_act(1:3),q(1:5,1),Rotm,eul,feedback_ratio,1);
-%     tau1 = (5*(qR_des - q(1:5)) + Kd*(0 - qd(1:5)));
-%     % tau1(2) = -100*(0-RPY(1))-20*(0-w_act(1));
-% end
-% if swing_schedule(2)==0
-%     tau1 = (Kp*(qR_des - q(1:5)) + Kd*(0 - qd(1:5)));
-%     fpL_des = [fx_des_L;fy_des_L;0];
-%     qL_des = foot_to_joint(fpL_des-x_act(1:3),q(6:10,1),Rotm,eul,feedback_ratio,-1);
-%     tau2 = (5*(qL_des - q(6:10)) + Kd*(0 - qd(6:10)));
-%     % tau2(2) = -100*(0-RPY(1))-20*(0-w_act(1));
-% end
+if swing_schedule(1)==0 % left leg swings
+    tau2 = (Kp*(qL_des - q(6:10)) + Kd*(0 - qd(6:10)));
+    fpR_des = [fx_des_R;fy_des_R;0];
+    qR_des = foot_to_joint(fpR_des-x_act(1:3),q(1:5,1),Rotm,eul,feedback_ratio,1);
+    tau1 = (5*(qR_des - q(1:5)) + Kd*(0 - qd(1:5)));
+    tau1(1) = -100*(0-RPY(1))-20*(0-w_act(1));
+    tau1(2) = -100*(0-RPY(1))-20*(0-w_act(1));
+end
+if swing_schedule(2)==0
+    tau1 = (Kp*(qR_des - q(1:5)) + Kd*(0 - qd(1:5)));
+    fpL_des = [fx_des_L;fy_des_L;0];
+    qL_des = foot_to_joint(fpL_des-x_act(1:3),q(6:10,1),Rotm,eul,feedback_ratio,-1);
+    tau2 = (5*(qL_des - q(6:10)) + Kd*(0 - qd(6:10)));
+    tau2(2) = -100*(0-RPY(1))-20*(0-w_act(1));
+end
 
 tau = [tau1;tau2];
 
