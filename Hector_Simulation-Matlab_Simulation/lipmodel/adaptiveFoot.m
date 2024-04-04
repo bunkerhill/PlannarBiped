@@ -72,6 +72,8 @@ classdef adaptiveFoot
         a_min
         T_u
         T_l
+        AX
+        AY
     end
     
     methods
@@ -107,8 +109,8 @@ classdef adaptiveFoot
             obj.longitudinalDCMOffsetMin=-1;
 
             % contingency parameters
-            obj.j_max = [1,2];
-            obj.j_min = [-1,-2];
+            obj.j_max = [6,6];
+            obj.j_min = [-6,-6];
             obj.a_max = ddxy_s_max_in;
             obj.a_min = ddxy_s_min_in;
         end
@@ -153,14 +155,29 @@ classdef adaptiveFoot
             %               xi(1)-currentStanceFootPosition(1) - 1/(obj.omega^2)*( ddxy_s(1)*(1-exp(-obj.omega*obj.T_l(1))) + obj.a_min(1)*exp(-obj.omega*obj.T_l(1))) - 1/(obj.omega^3)*obj.j_min(1)*(1-(1+obj.T_l(1)*obj.omega)*exp(-obj.omega*obj.T_l(1)))];
             % dcmOffsetY = [xi(2)-currentStanceFootPosition(2) - 1/(obj.omega^2)*( ddxy_s(2)*(1-exp(-obj.omega*obj.T_u(2))) + obj.a_max(2)*exp(-obj.omega*obj.T_u(2))) - 1/(obj.omega^3)*obj.j_max(2)*(1-(1+obj.T_u(2)*obj.omega)*exp(-obj.omega*obj.T_u(2)));
             %               xi(2)-currentStanceFootPosition(2) - 1/(obj.omega^2)*( ddxy_s(2)*(1-exp(-obj.omega*obj.T_l(2))) + obj.a_min(2)*exp(-obj.omega*obj.T_l(2))) - 1/(obj.omega^3)*obj.j_min(2)*(1-(1+obj.T_l(2)*obj.omega)*exp(-obj.omega*obj.T_l(2)))];
-            AX = [1/(obj.omega^2)*( ddxy_s(1)*(1-exp(-obj.omega*obj.T_u(1))) + obj.a_max(1)*exp(-obj.omega*obj.T_u(1))) + 1/(obj.omega^3)*obj.j_max(1)*(1-(1+obj.T_u(1)*obj.omega)*exp(-obj.omega*obj.T_u(1)));
+            obj.AX = [1/(obj.omega^2)*( ddxy_s(1)*(1-exp(-obj.omega*obj.T_u(1))) + obj.a_max(1)*exp(-obj.omega*obj.T_u(1))) + 1/(obj.omega^3)*obj.j_max(1)*(1-(1+obj.T_u(1)*obj.omega)*exp(-obj.omega*obj.T_u(1)));
                 1/(obj.omega^2)*( ddxy_s(1)*(1-exp(-obj.omega*obj.T_l(1))) + obj.a_min(1)*exp(-obj.omega*obj.T_l(1))) + 1/(obj.omega^3)*obj.j_min(1)*(1-(1+obj.T_l(1)*obj.omega)*exp(-obj.omega*obj.T_l(1)))];
-            AY = [1/(obj.omega^2)*( ddxy_s(2)*(1-exp(-obj.omega*obj.T_u(2))) + obj.a_max(2)*exp(-obj.omega*obj.T_u(2))) + 1/(obj.omega^3)*obj.j_max(2)*(1-(1+obj.T_u(2)*obj.omega)*exp(-obj.omega*obj.T_u(2)));
+            obj.AY = [1/(obj.omega^2)*( ddxy_s(2)*(1-exp(-obj.omega*obj.T_u(2))) + obj.a_max(2)*exp(-obj.omega*obj.T_u(2))) + 1/(obj.omega^3)*obj.j_max(2)*(1-(1+obj.T_u(2)*obj.omega)*exp(-obj.omega*obj.T_u(2)));
                 1/(obj.omega^2)*( ddxy_s(2)*(1-exp(-obj.omega*obj.T_l(2))) + obj.a_min(2)*exp(-obj.omega*obj.T_l(2))) + 1/(obj.omega^3)*obj.j_min(2)*(1-(1+obj.T_l(2)*obj.omega)*exp(-obj.omega*obj.T_l(2)))];
             dcmOffsetX = [xi(1)-currentStanceFootPosition(1);
-                          xi(1)-currentStanceFootPosition(1)] -AX;
+                          xi(1)-currentStanceFootPosition(1)] -obj.AX;
             dcmOffsetY = [xi(2)-currentStanceFootPosition(2);
-                          xi(2)-currentStanceFootPosition(2)] -AY;
+                          xi(2)-currentStanceFootPosition(2)] -obj.AY;
+
+            % define the bound of dcmoffset
+            obj.dcmXSteady = obj.stepLengthSteady/(1/obj.deltaTransformation(obj.stepDuration) -1) + 1/(obj.omega^2)*ddxy_s(1)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
+            obj.dcmYSteady = obj.stepWidthSteady/(1/obj.deltaTransformation(obj.stepDuration) +1)+ 1/(obj.omega^2)*ddxy_s(2)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
+
+            % y
+            obj.rightStepDcmOffsetMax = -obj.rightStepWidthMin/(1/obj.deltaTransformation(obj.stepDuration) +1)+ 1/(obj.omega^2)*ddxy_s(2)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
+            obj.rightStepDcmOffsetMin = -obj.rightStepWidthMax/(1/obj.deltaTransformation(obj.stepDuration) +1)+ 1/(obj.omega^2)*ddxy_s(2)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
+            obj.leftStepDcmOffsetMax = -obj.leftStepWidthMin/(1/obj.deltaTransformation(obj.stepDuration) +1)+ 1/(obj.omega^2)*ddxy_s(2)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
+            obj.leftStepDcmOffsetMin= -obj.leftStepWidthMax/(1/obj.deltaTransformation(obj.stepDuration) +1)+ 1/(obj.omega^2)*ddxy_s(2)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
+            % x
+            obj.longitudinalDCMOffsetMax = obj.stepLengthMax/(1/obj.deltaTransformation(obj.stepDuration) -1)+ 1/(obj.omega^2)*ddxy_s(1)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
+            obj.longitudinalDCMOffsetMin = obj.stepLengthMin/(1/obj.deltaTransformation(obj.stepDuration) -1)+ 1/(obj.omega^2)*ddxy_s(1)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
+
+
             obj=obj.optimalLongitudinalFootPlacement(Nsteps, dcmOffsetX, currentStanceFootPosition(1));
             obj=obj.optimalLateralFootPlacement(Nsteps, dcmOffsetY, currentStanceFootPosition(2));
             obj.stanceFootConstraint = struct;
@@ -209,17 +226,19 @@ classdef adaptiveFoot
                 xiY=(xiVector(2,end)-stanceFootNextStep(2))*exp(obj.omega*(timeNextStep-timeNextStep(1)))+stanceFootNextStep(2);
                 xiVector=[xiVector, [xiX;xiY]];
             end
-            % figure,plot(timeVector, stanceFootVector(1,:),'.');
+            figure,plot(timeVector, stanceFootVector(1,:),'.');
             % hold on,plot(timeVector, xiVector(1,:));
-            % hold on,plot(obj.stanceFootConstraint.time, obj.stanceFootConstraint.ankleX,'o');
-            % xlabel("t(sec)"); ylabel("x(m)");
-            % legend("stance foot x","\xi_u^x","stance foot ankle x")
-            % 
-            % figure,plot(timeVector, stanceFootVector(2,:),'.');
+            hold on,plot(obj.stanceFootConstraint.time, obj.stanceFootConstraint.Up_ankleX,'*-');
+            hold on,plot(obj.stanceFootConstraint.time, obj.stanceFootConstraint.Low_ankleX,'*--');
+            xlabel("t(sec)"); ylabel("x(m)");
+            legend("stance foot x","\xi_u^x","stance foot ankle x")
+
+            figure,plot(timeVector, stanceFootVector(2,:),'.');
             % hold on,plot(timeVector, xiVector(2,:));
-            % hold on,plot(obj.stanceFootConstraint.time, obj.stanceFootConstraint.ankleY,'o');
-            % xlabel("t(sec)"); ylabel("y(m)");
-            % legend("stance foot y","\xi_u^y","stance foot ankle y")
+            hold on,plot(obj.stanceFootConstraint.time, obj.stanceFootConstraint.Up_ankleY,'*-');
+            hold on,plot(obj.stanceFootConstraint.time, obj.stanceFootConstraint.Low_ankleY,'*--');
+            xlabel("t(sec)"); ylabel("y(m)");
+            legend("stance foot y","\xi_u^y","stance foot ankle y")
 
             % figure,plot(stanceFootVector(1,:),stanceFootVector(2,:),'*-')
             % hold on,plot(xiVector(1,:),xiVector(2,:));

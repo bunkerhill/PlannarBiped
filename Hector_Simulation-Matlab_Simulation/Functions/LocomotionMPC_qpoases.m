@@ -59,7 +59,9 @@ dxy_s = [moving_xy(2);moving_xy(5)];
 xy_s_com = [moving_xy(1);moving_xy(2);moving_xy(4);moving_xy(5)];
 % ddxy_s = [0;0]; % suppose the ground surface is not moving
 ddxy_s = [moving_xy(3);moving_xy(6)];
-
+next_zmp_x = fx_end_R-xy_s(1);
+next_zmp_y = fy_end_R-xy_s(2);
+next_zmp = [next_zmp_x;next_zmp_y];
 % for the beginning of stand on two feet, xy_com is the same as initial actual com
 if global_t==0
     xy_com=[x(4);x(10);x(5);x(11)];
@@ -85,10 +87,6 @@ else
     x_z = foot(7:8)-xy_s;
 end
 
-if global_t <= 0.2
-    % for stand on two feet, x_z is in the middle of two feet
-    x_z = (foot(1:2)+foot(7:8))/2;
-end
 u_zmp_tank = [u_zmp_tank u_zmp];
 x_z_tank = [x_z_tank x_z];
 moving_tank = [moving_tank moving_xy];

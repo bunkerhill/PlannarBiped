@@ -79,8 +79,8 @@ classdef contingencyMPC
             obj.distime = 0.2;
             
             % contingency parameters
-            obj.j_max = [1,2];
-            obj.j_min = [-1,-2];
+            obj.j_max = [6,6];
+            obj.j_min = [-6,-6];
             obj.a_max = ddxy_s_max_in;
             obj.a_min = ddxy_s_min_in;
         end
