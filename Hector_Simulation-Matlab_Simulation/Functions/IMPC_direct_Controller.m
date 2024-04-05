@@ -243,12 +243,13 @@ L = [130 0 0 0;
      0 0 600 0;
      0 0 0 600];
 W = 0.001*eye(12);
-M = 100*eye(12);  
+M = 80*eye(12);  
+MM = 1*eye(12); 
 % L = eye(6);
 % control input minimization:
 % QP math:
-Hd = 2*(A'*L*A+W+M);
-fd = -2*(A'*L*b + M*u_direct);  
+Hd = 2*(A'*L*A+W+M +MM);
+fd = -2*(A'*L*b + M*u_direct +MM*last_u);  
 
 %% QP Constraints:
 % please refer to the quadprog constraint format: lbA <= A*u <= ubA
