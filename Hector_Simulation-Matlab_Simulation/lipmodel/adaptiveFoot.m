@@ -165,18 +165,17 @@ classdef adaptiveFoot
                           xi(2)-currentStanceFootPosition(2)] -obj.AY;
 
             % define the bound of dcmoffset
-            % obj.dcmXSteady = obj.stepLengthSteady/(1/obj.deltaTransformation(obj.stepDuration) -1) + 1/(obj.omega^2)*ddxy_s(1)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
-            % obj.dcmYSteady = obj.stepWidthSteady/(1/obj.deltaTransformation(obj.stepDuration) +1)+ 1/(obj.omega^2)*ddxy_s(2)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
-            % 
-            % % y
-            % obj.rightStepDcmOffsetMax = -obj.rightStepWidthMin/(1/obj.deltaTransformation(obj.stepDuration) +1)+ 1/(obj.omega^2)*ddxy_s(2)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
-            % obj.rightStepDcmOffsetMin = -obj.rightStepWidthMax/(1/obj.deltaTransformation(obj.stepDuration) +1)+ 1/(obj.omega^2)*ddxy_s(2)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
-            % obj.leftStepDcmOffsetMax = -obj.leftStepWidthMin/(1/obj.deltaTransformation(obj.stepDuration) +1)+ 1/(obj.omega^2)*ddxy_s(2)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
-            % obj.leftStepDcmOffsetMin= -obj.leftStepWidthMax/(1/obj.deltaTransformation(obj.stepDuration) +1)+ 1/(obj.omega^2)*ddxy_s(2)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
-            % % x
-            % obj.longitudinalDCMOffsetMax = obj.stepLengthMax/(1/obj.deltaTransformation(obj.stepDuration) -1)+ 1/(obj.omega^2)*ddxy_s(1)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
-            % obj.longitudinalDCMOffsetMin = obj.stepLengthMin/(1/obj.deltaTransformation(obj.stepDuration) -1)+ 1/(obj.omega^2)*ddxy_s(1)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
+            obj.dcmXSteady = obj.stepLengthSteady/(1/obj.deltaTransformation(obj.stepDuration) -1) - 1/(obj.omega^2)*ddxy_s(1);
+            obj.dcmYSteady = obj.stepWidthSteady/(1/obj.deltaTransformation(obj.stepDuration) +1) - 1/(obj.omega^2)*ddxy_s(2);
 
+            % y
+            obj.rightStepDcmOffsetMax = -obj.rightStepWidthMin/(1/obj.deltaTransformation(obj.stepDuration) +1) - 1/(obj.omega^2)*ddxy_s(2);
+            obj.rightStepDcmOffsetMin = -obj.rightStepWidthMax/(1/obj.deltaTransformation(obj.stepDuration) +1) - 1/(obj.omega^2)*ddxy_s(2);
+            obj.leftStepDcmOffsetMax = -obj.leftStepWidthMin/(1/obj.deltaTransformation(obj.stepDuration) +1) - 1/(obj.omega^2)*ddxy_s(2);
+            obj.leftStepDcmOffsetMin= -obj.leftStepWidthMax/(1/obj.deltaTransformation(obj.stepDuration) +1) - 1/(obj.omega^2)*ddxy_s(2);
+            % x
+            obj.longitudinalDCMOffsetMax = obj.stepLengthMax/(1/obj.deltaTransformation(obj.stepDuration) -1) - 1/(obj.omega^2)*ddxy_s(1);
+            obj.longitudinalDCMOffsetMin = obj.stepLengthMin/(1/obj.deltaTransformation(obj.stepDuration) -1) - 1/(obj.omega^2)*ddxy_s(1);
 
             obj=obj.optimalLongitudinalFootPlacement(Nsteps, dcmOffsetX, currentStanceFootPosition(1));
             obj=obj.optimalLateralFootPlacement(Nsteps, dcmOffsetY, currentStanceFootPosition(2));
