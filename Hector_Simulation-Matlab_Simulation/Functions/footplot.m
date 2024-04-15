@@ -3,7 +3,7 @@ close all
 set(groot, 'defaulttextinterpreter','latex')
 set(groot, 'defaultaxesticklabelinterpreter','latex')
 set(groot, 'defaultlegendinterpreter','latex')
-T=0:0.008:2.02;
+T=0:0.008:5;
 %% plot
 figure
 plot(T,u_zmp_tank(1,:))
@@ -45,22 +45,21 @@ axis equal
 figure
 
 for i=1:length(x_z_tank(1,:))
-    % rectangle('Position',[x_z_tank(1,i)-0.06,x_z_tank(end,i)-0.01,0.12,0.02])
-    r = 0.04;
-    rectangle('Position',[x_z_tank(1,i)-r,x_z_tank(end,i)-r,2*r,2*r],'Curvature',[1 1],'EdgeColor','r')
+    rectangle('Position',[x_z_tank(1,i)-0.06,x_z_tank(end,i)-0.01,0.12,0.02])
+    % r = 0.04;
+    % rectangle('Position',[x_z_tank(1,i)-r,x_z_tank(end,i)-r,2*r,2*r],'Curvature',[1 1],'EdgeColor','r')
     hold on
 end
-plot(x_z_tank(1,:),x_z_tank(end,:))
-% plot(u_zmp_tank(1,:),u_zmp_tank(end,:))
-plot(out.xout(:,4)'-moving_tank(1,:),out.xout(:,5)'-moving_tank(4,:))
+% plot(x_z_tank(1,:),x_z_tank(end,:))
+plot(u_zmp_tank(1,:),u_zmp_tank(end,:))
+% plot(out.xout(:,4)'-moving_tank(1,:),out.xout(:,5)'-moving_tank(4,:))
 % plot(ddxyz_com_tank(1,:),ddxyz_com_tank(2,:))
 title('foot placement(ZMP) in x-y plane')
 xlabel('x position (m)') 
 ylabel('y position (m)') 
 legend({'actual zmp','desired zmp','actual com','desired com'})
 axis equal 
-[-0.1148;
--0.0414]
+
 %%
 % figure
 % for i=1:length(X_min)
@@ -164,12 +163,13 @@ set(gca,'fontsize',14)%%
 
 %%
 figure
-plot(T,moving_tank(3,:))
+plot(T,moving_tank(3,:), 'LineWidth',1.5)
 hold on
-plot(T,moving_tank(6,:),'--')
+plot(T,moving_tank(6,:),'--', 'LineWidth',1.5)
 xlabel('time (s)') 
-ylabel('Disturbance (m/s^2)') 
+ylabel('Disturbance ($m/s^2$)') 
 legend({'x-direction','y-direction'})
+set(gca,'fontsize',14)
 
 figure
 plot(T,moving_tank(1,:))

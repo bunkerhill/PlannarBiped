@@ -65,7 +65,7 @@ for i=1:300
     zmpController = contingencyMPC(comHeight, footHalfLength, footHalfWidth, ddxy_s_max, ddxy_s_min);
     zmpVector=[zmpVector, currentZMP];
     zmpController = zmpController.MPC(xi, currentZMP, currentTime, footPlanner.stanceFootConstraint,ddxy_s);
-    % zmpController.drawZMPPreviewAndConstraint()
+     zmpController.drawZMPPreviewAndConstraint()
     % footPlanner.drawPeriodicGait(5)
     optimalZMP = zmpController.getOptimalZMP();
     x_com = lip_dynamics(x_com,currentStanceFootPosition,ddxy_s,0.01,comHeight,g);

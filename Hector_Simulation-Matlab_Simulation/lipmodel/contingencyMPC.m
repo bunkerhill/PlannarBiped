@@ -243,30 +243,48 @@ classdef contingencyMPC
 
 
         function [] = drawZMPPreviewAndConstraint(obj)
-            figure, plot(obj.previewTimeHorizon, obj.Up_ZMPConstraintXMax,'-');
-            hold on,plot(obj.previewTimeHorizon, obj.Up_ZMPConstraintXMin,'-');
-            hold on,plot(obj.previewTimeHorizon(1:end-1), obj.previewZMPXPosition(2:obj.vectorLength),'*-');
-            hold on,plot(obj.previewTimeHorizon, obj.Low_ZMPConstraintXMax,'--');
-            hold on,plot(obj.previewTimeHorizon, obj.Low_ZMPConstraintXMin,'--');
-            hold on,plot(obj.previewTimeHorizon(1:end-1), obj.previewZMPXPosition(obj.vectorLength+2:2*obj.vectorLength),'*--');
+            figure, plot(obj.previewTimeHorizon(1:end-1), obj.previewZMPXPosition(2:obj.vectorLength),'--','LineWidth',2.5);
+            hold on,plot(obj.previewTimeHorizon(1:end-1), obj.previewZMPXPosition(obj.vectorLength+2:2*obj.vectorLength),'--','LineWidth',2.5);
+            hold on,plot(obj.previewTimeHorizon, obj.Up_ZMPConstraintXMax,'--','Color',[0.75, 0, 0.75]);
+            hold on,plot(obj.previewTimeHorizon, obj.Up_ZMPConstraintXMin,'--','Color',[0.75, 0, 0.75]);
+            hold on,plot(obj.previewTimeHorizon, obj.Low_ZMPConstraintXMax,'--','Color',[0.75, 0, 0.75]);
+            hold on,plot(obj.previewTimeHorizon, obj.Low_ZMPConstraintXMin,'--','Color',[0.75, 0, 0.75]);
+            hold on,plot(obj.previewTimeHorizon(1:end-1), obj.previewZMPXPosition(obj.vectorLength+2:2*obj.vectorLength),'--','LineWidth',2.5);
             xlabel("t(sec)");ylabel("x(m)")
-            legend("ZMP up x constraint max", "ZMP up x constraint min", "optimal up ZMP x","ZMP low x constraint max", "ZMP low x constraint min", "optimal low ZMP x")
+            legend("optimal up ZMP x","optimal low ZMP x")
+            set(gca,'fontsize',14)
 
-            figure,plot(obj.previewTimeHorizon, obj.Up_ZMPConstraintYMax,'-');
-            hold on,plot(obj.previewTimeHorizon, obj.Up_ZMPConstraintYMin,'-');
-            hold on,plot(obj.previewTimeHorizon(1:end-1), obj.previewZMPYPosition(2:obj.vectorLength),'*-');
-            hold on,plot(obj.previewTimeHorizon, obj.Low_ZMPConstraintYMax,'--');
-            hold on,plot(obj.previewTimeHorizon, obj.Low_ZMPConstraintYMin,'--');
-            hold on,plot(obj.previewTimeHorizon(1:end-1), obj.previewZMPYPosition(obj.vectorLength+2:2*obj.vectorLength),'*--');
+            figure,plot(obj.previewTimeHorizon(1:end-1), obj.previewZMPYPosition(2:obj.vectorLength),'--','LineWidth',2.5);
+            hold on,plot(obj.previewTimeHorizon(1:end-1), obj.previewZMPYPosition(obj.vectorLength+2:2*obj.vectorLength),'--','LineWidth',2.5);
+            hold on,plot(obj.previewTimeHorizon, obj.Up_ZMPConstraintYMax,'--','Color',[0.75, 0, 0.75]);
+            hold on,plot(obj.previewTimeHorizon, obj.Up_ZMPConstraintYMin,'--','Color',[0.75, 0, 0.75]);
+
+            hold on,plot(obj.previewTimeHorizon, obj.Low_ZMPConstraintYMax,'--','Color',[0.75, 0, 0.75]);
+            hold on,plot(obj.previewTimeHorizon, obj.Low_ZMPConstraintYMin,'--','Color',[0.75, 0, 0.75]);
+
             xlabel("t(sec)");ylabel("y(m)")
-            legend("ZMP up y constraint max", "ZMP up y constraint min", "optimal up ZMP y", "ZMP low y constraint max", "ZMP low y constraint min", "optimal low ZMP y")
+            legend("optimal up ZMP y","optimal low ZMP y")
+            set(gca,'fontsize',14)
 
-            figure,plot(obj.previewZMPXPosition(1:obj.vectorLength), obj.previewZMPYPosition(1:obj.vectorLength),'*-');
-            hold on,plot(obj.previewZMPXPosition(obj.vectorLength+1:2*obj.vectorLength), obj.previewZMPYPosition(obj.vectorLength+1:2*obj.vectorLength),'*--');
+            figure
+            for i=2:length(obj.stanceConstraint.Up_ankleX)
+                rectangle('Position',[obj.stanceConstraint.Up_ankleX(i)-0.06,obj.stanceConstraint.Up_ankleY(i)-0.01,0.12,0.02],'LineWidth',1.5,'EdgeColor','r','LineStyle','-.')
+                % r = 0.04;
+                % rectangle('Position',[x_z_tank(1,i)-r,x_z_tank(end,i)-r,2*r,2*r],'Curvature',[1 1],'EdgeColor','r')
+                hold on
+            end
+            for i=2:length(obj.stanceConstraint.Low_ankleX)
+                rectangle('Position',[obj.stanceConstraint.Low_ankleX(i)-0.06,obj.stanceConstraint.Low_ankleY(i)-0.01,0.12,0.02],'LineWidth',1.5,'EdgeColor','r','LineStyle','-.')
+                % r = 0.04;
+                % rectangle('Position',[x_z_tank(1,i)-r,x_z_tank(end,i)-r,2*r,2*r],'Curvature',[1 1],'EdgeColor','r')
+                hold on
+            end
+            plot(obj.previewZMPXPosition(2:obj.vectorLength), obj.previewZMPYPosition(2:obj.vectorLength),'--','Color','g');
+            hold on,plot(obj.previewZMPXPosition(obj.vectorLength+2:2*obj.vectorLength), obj.previewZMPYPosition(obj.vectorLength+2:2*obj.vectorLength),'--','Color','b');
             axis equal
             xlabel("x(m)");ylabel("y(m)")
-            legend("optimal up ZMP","optimal low ZMP")
-            
+            legend("Previous ZMP","up bound ZMP","low bound ZMP")
+            set(gca,'fontsize',14)
         end
 
         function zmpControl = getOptimalZMP(obj)
