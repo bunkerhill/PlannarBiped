@@ -25,13 +25,15 @@ Rightfoot = [0;0];
 com_x = [0;0];
 com_dx = [0;0];
 next_footHold = [0;0];
-ddxy_s_max = [15;15];
-ddxy_s_min = [-15;-15];
-footPlanner=adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth, ddxy_s_max, ddxy_s_min);
-%% intrinsic mpc
+jerk_max = [6,6];
+jerk_min = [-6,-6];
+ddxy_s_max = [3;3];
+ddxy_s_min = [-3;-3];
+footPlanner=adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth, ddxy_s_max, ddxy_s_min,jerk_max, jerk_min);
+%% contingency mpc
 footHalfLength=0.06;
 footHalfWidth=0.01;
-zmpController = contingencyMPC(comHeight, footHalfLength, footHalfWidth, ddxy_s_max, ddxy_s_min);
+zmpController = contingencyMPC(comHeight, footHalfLength, footHalfWidth, ddxy_s_max, ddxy_s_min,jerk_max, jerk_min);
 %%
 % set rand
 % a = -10;
@@ -45,19 +47,19 @@ zmpController = contingencyMPC(comHeight, footHalfLength, footHalfWidth, ddxy_s_
 % Ay = 0.1;
 % T_periody = 0.6;
 Ax = 0;
-T_periodx = 2.3;
-Ay = 0.1;
-T_periody = 1.4;
+T_periodx = 0;
+Ay = 2.5;
+T_periody = 2;
 
 last_acc = [0;0];
 count = 1;
 L=0.525;
 g=9.81;
-ddxy_s_max = [15;15];
-ddxy_s_min = [-15;-15];
+% ddxy_s_max = [15;15];
+% ddxy_s_min = [-15;-15];
 % ddxy_s_max = [0;0];
 % ddxy_s_min = [0;0];
-MPC_controller = CMPC(g,L,ddxy_s_max,ddxy_s_min);
+% MPC_controller = CMPC(g,L,ddxy_s_max,ddxy_s_min);
 % MPC_controller = ACC_MPC(g,L);
 xy_com = [0;0;0;0];
 xy_com_tank = [0;0;0;0];
@@ -85,10 +87,12 @@ last_point = 0;
 moving_xy = [0;0;0;0;0;0];
 up_u = [];
 low_u = [];
-dx = Ax*2*pi/T_periodx;
-dy = Ay*2*pi/T_periody;
-% dx = 0;
-% dy = 0;
+% dx = Ax*2*pi/T_periodx;
+% dy = Ay*2*pi/T_periody;
+% dx = Ax*T_periodx/8;
+dx=0;
+% dy = Ay*T_periody/8;
+dy=0;
 x = 0;
 y = 0;
 %% General (sim world physics)
