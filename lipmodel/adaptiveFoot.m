@@ -86,10 +86,10 @@ classdef adaptiveFoot
             obj.rightStepWidthMax=-0.1;
             obj.rightStepWidthMin=-0.3;
 
-            obj.rightStepDcmOffsetMax = 1;
+            obj.rightStepDcmOffsetMax = 0.15;
             obj.rightStepDcmOffsetMin = 0;
             obj.leftStepDcmOffsetMax = 0;
-            obj.leftStepDcmOffsetMin= -1;
+            obj.leftStepDcmOffsetMin= -0.15;
 
             obj.stepLengthMax=0.18; %m
             obj.stepLengthMin=-0.18;
@@ -171,20 +171,22 @@ classdef adaptiveFoot
             hold on,plot(timeVector, xiVector(1,:));
             hold on,plot(obj.stanceFootConstraint.time, obj.stanceFootConstraint.ankleX,'o');
             xlabel("t(sec)"); ylabel("x(m)");
-            legend("stance foot x","\xi_u^x","stance foot ankle x")
+            legend("stance foot x","xi","stance foot ankle x")
 
             figure,plot(timeVector, stanceFootVector(2,:),'.');
-            hold on,plot(timeVector, xiVector(2,:));
+            hold on,plot(timeVector, xiVector(2,:),'.');
             hold on,plot(obj.stanceFootConstraint.time, obj.stanceFootConstraint.ankleY,'o');
             xlabel("t(sec)"); ylabel("y(m)");
-            legend("stance foot y","\xi_u^y","stance foot ankle y")
+            legend("stance foot y","xi","stance foot ankle y")
 
             figure,plot(stanceFootVector(1,:),stanceFootVector(2,:),'*')
             hold on,plot(xiVector(1,:),xiVector(2,:));
             hold on,plot(obj.stanceFootConstraint.ankleX, obj.stanceFootConstraint.ankleY,'o');
             
             xlabel("x(m)");ylabel("y(m)")
-            legend("stance foot", "\xi", "stance foot");
+            legend("stance foot", "xi", "stance foot");
+
+            figure,plot(obj.optimalDCMOffsetY,'.')
 
             % figure,plot(obj.stanceFootConstraint.time, obj.stanceFootConstraint.ankleX,'.');
         end
@@ -258,13 +260,17 @@ classdef adaptiveFoot
             leftFoot = [];
             rightFoot = [];
             stanceFootPosition = currentStanceFootPosition;
+            leftDCM = [];
+            rightDCM = [];
             for i=1:Nsteps
                 if obj.stanceFootSeq(i)==0
                     % left foot
                     leftFoot=[leftFoot, stanceFootPosition+s(i)];
+                    leftDCM = [leftDCM, b(i)];
                 else
                     % right foot
                     rightFoot=[rightFoot, stanceFootPosition+s(i)];
+                    rightDCM = [rightDCM, b(i)];
                 end
                 stanceFootPosition = stanceFootPosition+s(i);
             end
@@ -272,8 +278,10 @@ classdef adaptiveFoot
             % objective function
             leftFootSteadyState = obj.stepWidthSteady/2;
             rightFootSteadyState = -obj.stepWidthSteady/2;
-            objectiveFunction = (leftFoot-leftFootSteadyState)*(leftFoot-leftFootSteadyState)'...
-                +(rightFoot-rightFootSteadyState)*(rightFoot-rightFootSteadyState)';
+            objectiveFunction = 0*((leftFoot-leftFootSteadyState)*(leftFoot-leftFootSteadyState)'...
+                +(rightFoot-rightFootSteadyState)*(rightFoot-rightFootSteadyState)') ...
+                + 1*((leftDCM + obj.dcmYSteady)*(leftDCM + obj.dcmYSteady)'...
+                + (rightDCM - obj.dcmYSteady)*(rightDCM - obj.dcmYSteady)');
             % equality constraint
             deltaT = obj.deltaTransformation(obj.stepDuration);
             deltaTLeftover = obj.deltaTransformation(obj.leftoverTime);
@@ -318,13 +326,13 @@ classdef adaptiveFoot
                     dcmOffsetInitialGuess(i)=dcmOffsetUpperBound(i);
                     stanceFootInitialGuess(i)=stepWidthUpperBound(i);
                 end
-                if i==Nsteps
-                    % if this is the last step
-                    dcmOffsetLowerBound(i)=obj.dcmYSteady;
-                    dcmOffsetUpperBound(i)=obj.dcmYSteady;
-                    dcmOffsetInitialGuess(i)=dcmOffsetUpperBound(i);
-                    stanceFootInitialGuess(i)=stepWidthUpperBound(i);
-                end
+                % if i==Nsteps
+                %     % if this is the last step
+                %     dcmOffsetLowerBound(i)=obj.dcmYSteady;
+                %     dcmOffsetUpperBound(i)=obj.dcmYSteady;
+                %     dcmOffsetInitialGuess(i)=dcmOffsetUpperBound(i);
+                %     stanceFootInitialGuess(i)=stepWidthUpperBound(i);
+                % end
             end
 
             args.lbx = [ dcmOffsetLowerBound; stepWidthLowerBound];
@@ -333,8 +341,8 @@ classdef adaptiveFoot
             args.ubg = zeros(size(g));
 
             args.p   =  [];  % There are no parameters in this optimization problem
-            dcmOffsetInitialGuess = ones(size(b));
-            stanceFootInitialGuess = ones(size(s));
+            dcmOffsetInitialGuess = zeros(size(b));
+            stanceFootInitialGuess = zeros(size(s));
             args.x0  = [dcmOffsetInitialGuess; stanceFootInitialGuess]; % initialization of the optimization problem
             
             sol = solver('x0', args.x0, 'lbx', args.lbx, 'ubx', args.ubx,...

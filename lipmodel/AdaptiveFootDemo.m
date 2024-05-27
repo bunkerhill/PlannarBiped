@@ -26,7 +26,7 @@ for i=1:10
     timeVector=[timeVector, currentTime];
     footPlanner=footPlanner.findOptimalFootPlacement(Nsteps,xi,currentStanceFootID,currentStanceFootPosition,currentTime);
     xiVector=[xiVector, xi];
-    % footPlanner.drawOptimalFootPlacement()
+    footPlanner.drawOptimalFootPlacement()
     % footPlanner.drawPeriodicGait(7)
     footPlanner.stanceFootConstraint;
 
@@ -37,6 +37,9 @@ for i=1:10
     zmpVector=[zmpVector, currentZMP];
     zmpController = zmpController.MPC(xi, currentZMP, currentTime, footPlanner.stanceFootConstraint);
     % zmpController.drawZMPPreviewAndConstraint()
+
+    currentStanceFootID = mod(floor(currentTime/stepDuration),2);
+
     optimalZMP = zmpController.getOptimalZMP();
     xi(1)=(xi(1)-optimalZMP(1))*exp(omega*0.01)+optimalZMP(1);
     xi(2)=(xi(2)-optimalZMP(2))*exp(omega*0.01)+optimalZMP(2);
@@ -45,7 +48,7 @@ end
 
 figure,plot(timeVector,zmpVector(1,:),'-')
 hold on,plot(timeVector, xiVector(1,:),'-')
-legend("zmp x","\xi_u^x");
+legend("zmp x","xiux");
 figure,plot(timeVector,zmpVector(2,:),'-')
 hold on,plot(timeVector, xiVector(2,:),'-')
-legend("zmp y","\xi_u^y");
+legend("zmp y","xiuy");
