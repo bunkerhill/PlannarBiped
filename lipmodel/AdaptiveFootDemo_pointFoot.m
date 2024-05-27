@@ -21,7 +21,7 @@ currentZMP = [0;0.1];
 timeVector=[];
 xiVector=[];
 zmpVector=[];
-totalTime = 100;
+totalTime = 400;
 stepDurationTic=round(stepDuration*100);
 
 for i=1:totalTime
@@ -29,9 +29,9 @@ for i=1:totalTime
     timeVector=[timeVector, currentTime];
     footPlanner=footPlanner.findOptimalFootPlacement(Nsteps,xi,currentStanceFootID,currentStanceFootPosition,currentTime);
     xiVector=[xiVector, xi];
-    if mod(i,20) == 0
-        footPlanner.drawOptimalFootPlacement()
-    end
+    % if mod(i,40) == 0
+    %     footPlanner.drawOptimalFootPlacement()
+    % end
     % footPlanner.drawPeriodicGait(7)
     xi(1)=(xi(1)-currentStanceFootPosition(1))*exp(omega*0.01)+currentStanceFootPosition(1);
     xi(2)=(xi(2)-currentStanceFootPosition(2))*exp(omega*0.01)+currentStanceFootPosition(2);

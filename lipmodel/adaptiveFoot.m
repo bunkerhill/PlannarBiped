@@ -186,7 +186,6 @@ classdef adaptiveFoot
             xlabel("x(m)");ylabel("y(m)")
             legend("stance foot", "xi", "stance foot");
 
-            figure,plot(obj.optimalDCMOffsetY,'.')
 
             % figure,plot(obj.stanceFootConstraint.time, obj.stanceFootConstraint.ankleX,'.');
         end
@@ -278,7 +277,7 @@ classdef adaptiveFoot
             % objective function
             leftFootSteadyState = obj.stepWidthSteady/2;
             rightFootSteadyState = -obj.stepWidthSteady/2;
-            objectiveFunction = 0*((leftFoot-leftFootSteadyState)*(leftFoot-leftFootSteadyState)'...
+            objectiveFunction = 1*((leftFoot-leftFootSteadyState)*(leftFoot-leftFootSteadyState)'...
                 +(rightFoot-rightFootSteadyState)*(rightFoot-rightFootSteadyState)') ...
                 + 1*((leftDCM + obj.dcmYSteady)*(leftDCM + obj.dcmYSteady)'...
                 + (rightDCM - obj.dcmYSteady)*(rightDCM - obj.dcmYSteady)');
