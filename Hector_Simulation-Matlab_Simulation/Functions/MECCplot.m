@@ -19,5 +19,5 @@ xlabel('x position (m)')
 ylabel('y position (m)') 
 legend({'ZMP','COM'})
 axis equal 
-set(gca,'fontsize',14)%%
+set(gca,'fontsize',18)%%
 

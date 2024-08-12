@@ -169,7 +169,7 @@ plot(T,moving_tank(6,:),'--', 'LineWidth',1.5)
 xlabel('time (s)') 
 ylabel('Disturbance ($m/s^2$)') 
 legend({'x-direction','y-direction'})
-set(gca,'fontsize',14)
+set(gca,'fontsize',18)
 
 figure
 plot(T,moving_tank(1,:))
