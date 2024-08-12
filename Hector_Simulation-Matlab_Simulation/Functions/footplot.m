@@ -3,7 +3,7 @@ close all
 set(groot, 'defaulttextinterpreter','latex')
 set(groot, 'defaultaxesticklabelinterpreter','latex')
 set(groot, 'defaultlegendinterpreter','latex')
-T=0:0.008:5;
+T=0:0.008:3;
 %% plot
 figure
 plot(T,u_zmp_tank(1,:))
@@ -174,12 +174,13 @@ set(gca,'fontsize',18)
 figure
 plot(T,moving_tank(1,:))
 hold on
-plot(T,moving_tank(4,:),'--')
+plot(T,moving_tank(4,:),'--', 'LineWidth',1.5)
 plot(T,moving_tank(2,:))
-plot(T,moving_tank(5,:),'--')
+plot(T,moving_tank(5,:),'--', 'LineWidth',1.5)
 xlabel('time (s)') 
 ylabel('moving surface motion') 
 legend({'x-position','y-position','x-velocity','y-velocity'})
+set(gca,'fontsize',14)
 %% 3D plot
 figure
 

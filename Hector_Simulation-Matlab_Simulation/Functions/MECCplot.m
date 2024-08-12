@@ -1,7 +1,7 @@
 % footprint
 num = 1;
-x_z = x_z_tank(:,1:num:end);
-u_zmp = u_zmp_tank(:,1:num:end);
+x_z = x_z_tank(:,500:num:end);
+u_zmp = u_zmp_tank(:,500:num:end);
 
 figure
 
@@ -11,9 +11,9 @@ for i=1:length(x_z(1,:))-1
     % rectangle('Position',[x_z_tank(1,i)-r,x_z_tank(end,i)-r,2*r,2*r],'Curvature',[1 1],'EdgeColor','r')
     hold on
 end
-plot(x_z_tank(1,:),x_z_tank(end,:))
+plot(x_z(1,:),x_z(end,:))
 % plot(u_zmp(1,:),u_zmp(end,:))
-plot(out.xout(:,4)'-moving_tank(1,:),out.xout(:,5)'-moving_tank(4,:))
+plot(out.xout(500:num:end,4)'-moving_tank(1,500:num:end),out.xout(500:num:end,5)'-moving_tank(4,500:num:end))
 % plot(ddxyz_com(1,:),ddxyz_com(2,:))
 xlabel('x position (m)') 
 ylabel('y position (m)') 

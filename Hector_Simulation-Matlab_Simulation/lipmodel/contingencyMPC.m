@@ -62,7 +62,7 @@ classdef contingencyMPC
     end
 
     methods
-        function obj = contingencyMPC(comHeight, footHalfLength, footHalfWidth, ddxy_s_max_in, ddxy_s_min_in)
+        function obj = contingencyMPC(comHeight, footHalfLength, footHalfWidth, ddxy_s_max_in, ddxy_s_min_in, jerk_max, jerk_min)
             obj.g = 9.8; %m/s^2
             obj.L = comHeight;
             obj.delta = 0.01;
@@ -79,8 +79,8 @@ classdef contingencyMPC
             obj.distime = 0.2;
             
             % contingency parameters
-            obj.j_max = [6,6];
-            obj.j_min = [-6,-6];
+            obj.j_max = jerk_max;
+            obj.j_min = jerk_min;
             obj.a_max = ddxy_s_max_in;
             obj.a_min = ddxy_s_min_in;
         end
@@ -119,8 +119,8 @@ classdef contingencyMPC
             Aeq = [blkdiag(Aeq1,Aeq1);
                    Aeq2];
                
-            beq = [beq1 - 1/(omega^2)*( ddxy_s(1)*(1-exp(-omega*obj.T_u(1))) + obj.a_max(1)*exp(-omega*obj.T_u(1)) ) - 1/(omega^3)*obj.j_max(1)*(1-(1+obj.T_u(1)*omega)*exp(-omega*obj.T_u(1)));
-                   beq1 - 1/(omega^2)*( ddxy_s(1)*(1-exp(-omega*obj.T_l(1))) + obj.a_min(1)*exp(-omega*obj.T_l(1)) ) - 1/(omega^3)*obj.j_min(1)*(1-(1+obj.T_l(1)*omega)*exp(-omega*obj.T_l(1)));
+            beq = [beq1 - 1/(omega^2)*( ddxy_s(1)*(1-exp(-omega*obj.T_u(1))) + obj.a_max(1)*(exp(-omega*obj.T_u(1)) -exp(-omega*obj.T_h))) - 1/(omega^3)*obj.j_max(1)*(1-(1+obj.T_u(1)*omega)*exp(-omega*obj.T_u(1)));
+                   beq1 - 1/(omega^2)*( ddxy_s(1)*(1-exp(-omega*obj.T_l(1))) + obj.a_min(1)*(exp(-omega*obj.T_l(1)) -exp(-omega*obj.T_h))) - 1/(omega^3)*obj.j_min(1)*(1-(1+obj.T_l(1)*omega)*exp(-omega*obj.T_l(1)));
                    0];
 
             % control constraint

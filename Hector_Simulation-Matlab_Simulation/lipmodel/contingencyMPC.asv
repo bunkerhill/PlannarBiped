@@ -62,7 +62,7 @@ classdef contingencyMPC
     end
 
     methods
-        function obj = contingencyMPC(comHeight, footHalfLength, footHalfWidth, ddxy_s_max_in, ddxy_s_min_in)
+        function obj = contingencyMPC(comHeight, footHalfLength, footHalfWidth, ddxy_s_max_in, ddxy_s_min_in, jerk_max, jerk_min)
             obj.g = 9.8; %m/s^2
             obj.L = comHeight;
             obj.delta = 0.01;
@@ -79,8 +79,8 @@ classdef contingencyMPC
             obj.distime = 0.2;
             
             % contingency parameters
-            obj.j_max = [6,6];
-            obj.j_min = [-6,-6];
+            obj.j_max = jerk_max;
+            obj.j_min = jerk_min;
             obj.a_max = ddxy_s_max_in;
             obj.a_min = ddxy_s_min_in;
         end
@@ -119,8 +119,8 @@ classdef contingencyMPC
             Aeq = [blkdiag(Aeq1,Aeq1);
                    Aeq2];
                
-            beq = [beq1 - 1/(omega^2)*( ddxy_s(1)*(1-exp(-omega*obj.T_u(1))) + obj.a_max(1)*exp(-omega*obj.T_u(1)) ) - 1/(omega^3)*obj.j_max(1)*(1-(1+obj.T_u(1)*omega)*exp(-omega*obj.T_u(1)));
-                   beq1 - 1/(omega^2)*( ddxy_s(1)*(1-exp(-omega*obj.T_l(1))) + obj.a_min(1)*exp(-omega*obj.T_l(1)) ) - 1/(omega^3)*obj.j_min(1)*(1-(1+obj.T_l(1)*omega)*exp(-omega*obj.T_l(1)));
+            beq = [beq1 - 1/(omega^2)*( ddxy_s(1)*(1-exp(-omega*obj.T_u(1))) + obj.a_max(1)*(exp(-omega*obj.T_u(1)) ) - 1/(omega^3)*obj.j_max(1)*(1-(1+obj.T_u(1)*omega)*exp(-omega*obj.T_u(1)));
+                   beq1 - 1/(omega^2)*( ddxy_s(1)*(1-exp(-omega*obj.T_l(1))) + obj.a_min(1)*(exp(-omega*obj.T_l(1)) ) - 1/(omega^3)*obj.j_min(1)*(1-(1+obj.T_l(1)*omega)*exp(-omega*obj.T_l(1)));
                    0];
 
             % control constraint
@@ -258,26 +258,32 @@ classdef contingencyMPC
             hold on,plot(obj.previewTimeHorizon(1:end-1), obj.previewZMPYPosition(obj.vectorLength+2:2*obj.vectorLength),'--','LineWidth',2.5);
             hold on,plot(obj.previewTimeHorizon, obj.Up_ZMPConstraintYMax,'--','Color',[0.75, 0, 0.75]);
             hold on,plot(obj.previewTimeHorizon, obj.Up_ZMPConstraintYMin,'--','Color',[0.75, 0, 0.75]);
-            
+
             hold on,plot(obj.previewTimeHorizon, obj.Low_ZMPConstraintYMax,'--','Color',[0.75, 0, 0.75]);
             hold on,plot(obj.previewTimeHorizon, obj.Low_ZMPConstraintYMin,'--','Color',[0.75, 0, 0.75]);
-    
+
             xlabel("t(sec)");ylabel("y(m)")
             legend("optimal up ZMP y","optimal low ZMP y")
             set(gca,'fontsize',14)
 
             figure
-            for i=1:length(x_z(1,:))
-                rectangle('Position',[x_z(1,i)-0.06,x_z(end,i)-0.01,0.12,0.02],'LineWidth',1.5,'EdgeColor','r')
+            for i=2:length(obj.stanceConstraint.Up_ankleX)
+                rectangle('Position',[obj.stanceConstraint.Up_ankleX(i)-0.06,obj.stanceConstraint.Up_ankleY(i)-0.01,0.12,0.02],'LineWidth',1.5,'EdgeColor','r','LineStyle','-.')
                 % r = 0.04;
                 % rectangle('Position',[x_z_tank(1,i)-r,x_z_tank(end,i)-r,2*r,2*r],'Curvature',[1 1],'EdgeColor','r')
                 hold on
             end
-            plot(obj.previewZMPXPosition(2:obj.vectorLength), obj.previewZMPYPosition(2:obj.vectorLength),'*-');
-            hold on,plot(obj.previewZMPXPosition(obj.vectorLength+2:2*obj.vectorLength), obj.previewZMPYPosition(obj.vectorLength+2:2*obj.vectorLength),'*--');
+            for i=2:length(obj.stanceConstraint.Low_ankleX)
+                rectangle('Position',[obj.stanceConstraint.Low_ankleX(i)-0.06,obj.stanceConstraint.Low_ankleY(i)-0.01,0.12,0.02],'LineWidth',1.5,'EdgeColor','r','LineStyle','-.')
+                % r = 0.04;
+                % rectangle('Position',[x_z_tank(1,i)-r,x_z_tank(end,i)-r,2*r,2*r],'Curvature',[1 1],'EdgeColor','r')
+                hold on
+            end
+            plot(obj.previewZMPXPosition(2:obj.vectorLength), obj.previewZMPYPosition(2:obj.vectorLength),'--','Color','g');
+            hold on,plot(obj.previewZMPXPosition(obj.vectorLength+2:2*obj.vectorLength), obj.previewZMPYPosition(obj.vectorLength+2:2*obj.vectorLength),'--','Color','b');
             axis equal
             xlabel("x(m)");ylabel("y(m)")
-            legend("optimal up ZMP","optimal low ZMP")
+            legend("Previous ZMP","up bound ZMP","low bound ZMP")
             set(gca,'fontsize',14)
         end
 
