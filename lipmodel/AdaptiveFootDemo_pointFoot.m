@@ -95,3 +95,8 @@ hold on,plot(timeVector, surfaceMotionVector(1,:),'.-')
 xlabel("t(sec)")
 ylabel("x/y acceleration (m/s/s)")
 legend("x acceleration", "y acceleration", "x position")
+
+figure,plot(zmpVector(1,:),zmpVector(2,:),'o-')
+% legend("zmp x","xiux", "x dcm offset");
+xlabel("x(m)")
+ylabel("y(m)")
