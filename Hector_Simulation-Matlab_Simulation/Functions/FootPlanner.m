@@ -4,7 +4,7 @@ global footPlanner next_footHold i_gait Leftfoot Rightfoot com_x com_dx moving_x
 
 ddxy_s = [moving_xy(3);moving_xy(6)];
 currentTime = t;
-Nsteps = 5; % number of steps that planner plans ahead
+Nsteps = 2; % number of steps that planner plans ahead
 comHeight=0.525;
 g=9.8;%m/s^2
 omega=sqrt(g/comHeight);
