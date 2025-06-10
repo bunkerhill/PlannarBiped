@@ -140,28 +140,52 @@ classdef adaptiveFoot
 
         function obj = findOptimalFootPlacement(obj, Nsteps, xi, currentStanceFoot, currentStanceFootPosition, currentTime,ddxy_s)
             
+            obj.T_u(1) = (obj.a_max(1)-ddxy_s(1))/obj.j_max(1);
+            obj.T_u(2) = (obj.a_max(2)-ddxy_s(2))/obj.j_max(2);
+            obj.T_l(1) = (obj.a_min(1)-ddxy_s(1))/obj.j_min(1);
+            obj.T_l(2) = (obj.a_min(2)-ddxy_s(2))/obj.j_min(2);
+            
             obj.leftoverTime=obj.stepDuration - mod(currentTime, obj.stepDuration);
             obj=obj.getStanceFootSequence(Nsteps, currentStanceFoot);
             obj.xiInitial = xi;
             obj.stanceFootInitial=currentStanceFootPosition;
+            % dcmOffsetX = xi(1)-currentStanceFootPosition(1) + 1/(obj.omega^2)*ddxy_s(1)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
+            % dcmOffsetY = xi(2)-currentStanceFootPosition(2) + 1/(obj.omega^2)*ddxy_s(2)*(exp(-obj.omega*(obj.stepDuration*Nsteps))-1);
+            % dcmOffsetX = [xi(1)-currentStanceFootPosition(1) - 1/(obj.omega^2)*( ddxy_s(1)*(1-exp(-obj.omega*obj.T_u(1))) + obj.a_max(1)*exp(-obj.omega*obj.T_u(1))) - 1/(obj.omega^3)*obj.j_max(1)*(1-(1+obj.T_u(1)*obj.omega)*exp(-obj.omega*obj.T_u(1)));
+            %               xi(1)-currentStanceFootPosition(1) - 1/(obj.omega^2)*( ddxy_s(1)*(1-exp(-obj.omega*obj.T_l(1))) + obj.a_min(1)*exp(-obj.omega*obj.T_l(1))) - 1/(obj.omega^3)*obj.j_min(1)*(1-(1+obj.T_l(1)*obj.omega)*exp(-obj.omega*obj.T_l(1)))];
+            % dcmOffsetY = [xi(2)-currentStanceFootPosition(2) - 1/(obj.omega^2)*( ddxy_s(2)*(1-exp(-obj.omega*obj.T_u(2))) + obj.a_max(2)*exp(-obj.omega*obj.T_u(2))) - 1/(obj.omega^3)*obj.j_max(2)*(1-(1+obj.T_u(2)*obj.omega)*exp(-obj.omega*obj.T_u(2)));
+            %               xi(2)-currentStanceFootPosition(2) - 1/(obj.omega^2)*( ddxy_s(2)*(1-exp(-obj.omega*obj.T_l(2))) + obj.a_min(2)*exp(-obj.omega*obj.T_l(2))) - 1/(obj.omega^3)*obj.j_min(2)*(1-(1+obj.T_l(2)*obj.omega)*exp(-obj.omega*obj.T_l(2)))];
             
+            % beq1 - 1/(omega^2)*( ddxy_s(1)*(1-exp(-omega*obj.T_u(1))) + obj.a_max(1)*(exp(-omega*obj.T_u(1))-exp(-omega*obj.T_h)) ) - 1/(omega^3)*obj.j_max(1)*(1-(1+obj.T_u(1)*omega)*exp(-omega*obj.T_u(1)))
+            
+            % obj.AX = [1/(obj.omega^2)*( ddxy_s(1)*(1-exp(-obj.omega*obj.T_u(1))) + obj.a_max(1)*exp(-obj.omega*obj.T_u(1))) + 1/(obj.omega^3)*obj.j_max(1)*(1-(1+obj.T_u(1)*obj.omega)*exp(-obj.omega*obj.T_u(1)));
+            %     1/(obj.omega^2)*( ddxy_s(1)*(1-exp(-obj.omega*obj.T_l(1))) + obj.a_min(1)*exp(-obj.omega*obj.T_l(1))) + 1/(obj.omega^3)*obj.j_min(1)*(1-(1+obj.T_l(1)*obj.omega)*exp(-obj.omega*obj.T_l(1)))];
+            % obj.AY = [1/(obj.omega^2)*( ddxy_s(2)*(1-exp(-obj.omega*obj.T_u(2))) + obj.a_max(2)*exp(-obj.omega*obj.T_u(2))) + 1/(obj.omega^3)*obj.j_max(2)*(1-(1+obj.T_u(2)*obj.omega)*exp(-obj.omega*obj.T_u(2)));
+            %     1/(obj.omega^2)*( ddxy_s(2)*(1-exp(-obj.omega*obj.T_l(2))) + obj.a_min(2)*exp(-obj.omega*obj.T_l(2))) + 1/(obj.omega^3)*obj.j_min(2)*(1-(1+obj.T_l(2)*obj.omega)*exp(-obj.omega*obj.T_l(2)))];
 
-            dcmOffsetX = xi(1)-currentStanceFootPosition(1);
-  
-            dcmOffsetY = xi(2)-currentStanceFootPosition(2);
+            % new AX and AY
+            obj.AX = [1/(obj.omega^2)*( ddxy_s(1)*(1-exp(-obj.omega*obj.T_u(1))) + obj.a_max(1)*(exp(-obj.omega*obj.T_u(1)) - exp(-obj.omega*(obj.stepDuration*Nsteps)))) + 1/(obj.omega^3)*obj.j_max(1)*(1-(1+obj.T_u(1)*obj.omega)*exp(-obj.omega*obj.T_u(1)));
+                1/(obj.omega^2)*( ddxy_s(1)*(1-exp(-obj.omega*obj.T_l(1))) + obj.a_min(1)*(exp(-obj.omega*obj.T_l(1)) - exp(-obj.omega*(obj.stepDuration*Nsteps)))) + 1/(obj.omega^3)*obj.j_min(1)*(1-(1+obj.T_l(1)*obj.omega)*exp(-obj.omega*obj.T_l(1)))];
+            obj.AY = [1/(obj.omega^2)*( ddxy_s(2)*(1-exp(-obj.omega*obj.T_u(2))) + obj.a_max(2)*(exp(-obj.omega*obj.T_u(2)) - exp(-obj.omega*(obj.stepDuration*Nsteps)))) + 1/(obj.omega^3)*obj.j_max(2)*(1-(1+obj.T_u(2)*obj.omega)*exp(-obj.omega*obj.T_u(2)));
+                1/(obj.omega^2)*( ddxy_s(2)*(1-exp(-obj.omega*obj.T_l(2))) + obj.a_min(2)*(exp(-obj.omega*obj.T_l(2)) - exp(-obj.omega*(obj.stepDuration*Nsteps)))) + 1/(obj.omega^3)*obj.j_min(2)*(1-(1+obj.T_l(2)*obj.omega)*exp(-obj.omega*obj.T_l(2)))];
+
+            dcmOffsetX = [xi(1)-currentStanceFootPosition(1);
+                          xi(1)-currentStanceFootPosition(1)] -obj.AX;
+            dcmOffsetY = [xi(2)-currentStanceFootPosition(2);
+                          xi(2)-currentStanceFootPosition(2)] -obj.AY;
 
             % define the bound of dcmoffset
-            obj.dcmXSteady = obj.stepLengthSteady/(1/obj.deltaTransformation(obj.stepDuration) -1);
-            obj.dcmYSteady = obj.stepWidthSteady/(1/obj.deltaTransformation(obj.stepDuration) +1);
+            obj.dcmXSteady = obj.stepLengthSteady/(1/obj.deltaTransformation(obj.stepDuration) -1) - 1/(obj.omega^2)*ddxy_s(1)*(1-exp(-obj.omega*(obj.stepDuration*Nsteps)));
+            obj.dcmYSteady = obj.stepWidthSteady/(1/obj.deltaTransformation(obj.stepDuration) +1) - 1/(obj.omega^2)*ddxy_s(2)*(1-exp(-obj.omega*(obj.stepDuration*Nsteps)));
 
             % y
-            obj.rightStepDcmOffsetMax = -obj.rightStepWidthMin/(1/obj.deltaTransformation(obj.stepDuration) +1);
-            obj.rightStepDcmOffsetMin = -obj.rightStepWidthMax/(1/obj.deltaTransformation(obj.stepDuration) +1);
-            obj.leftStepDcmOffsetMax = -obj.leftStepWidthMin/(1/obj.deltaTransformation(obj.stepDuration) +1);
-            obj.leftStepDcmOffsetMin= -obj.leftStepWidthMax/(1/obj.deltaTransformation(obj.stepDuration) +1);
+            obj.rightStepDcmOffsetMax = -obj.rightStepWidthMin/(1/obj.deltaTransformation(obj.stepDuration) +1) - 1/(obj.omega^2)*ddxy_s(2)*(1-exp(-obj.omega*(obj.stepDuration*Nsteps)));
+            obj.rightStepDcmOffsetMin = -obj.rightStepWidthMax/(1/obj.deltaTransformation(obj.stepDuration) +1) - 1/(obj.omega^2)*ddxy_s(2)*(1-exp(-obj.omega*(obj.stepDuration*Nsteps)));
+            obj.leftStepDcmOffsetMax = -obj.leftStepWidthMin/(1/obj.deltaTransformation(obj.stepDuration) +1) - 1/(obj.omega^2)*ddxy_s(2)*(1-exp(-obj.omega*(obj.stepDuration*Nsteps)));
+            obj.leftStepDcmOffsetMin= -obj.leftStepWidthMax/(1/obj.deltaTransformation(obj.stepDuration) +1) - 1/(obj.omega^2)*ddxy_s(2)*(1-exp(-obj.omega*(obj.stepDuration*Nsteps)));
             % x
-            obj.longitudinalDCMOffsetMax = obj.stepLengthMax/(1/obj.deltaTransformation(obj.stepDuration) -1);
-            obj.longitudinalDCMOffsetMin = obj.stepLengthMin/(1/obj.deltaTransformation(obj.stepDuration) -1);
+            obj.longitudinalDCMOffsetMax = obj.stepLengthMax/(1/obj.deltaTransformation(obj.stepDuration) -1) - 1/(obj.omega^2)*ddxy_s(1)*(1-exp(-obj.omega*(obj.stepDuration*Nsteps)));
+            obj.longitudinalDCMOffsetMin = obj.stepLengthMin/(1/obj.deltaTransformation(obj.stepDuration) -1) - 1/(obj.omega^2)*ddxy_s(1)*(1-exp(-obj.omega*(obj.stepDuration*Nsteps)));
 
             obj=obj.optimalLongitudinalFootPlacement(Nsteps, dcmOffsetX, currentStanceFootPosition(1));
             obj=obj.optimalLateralFootPlacement(Nsteps, dcmOffsetY, currentStanceFootPosition(2));
@@ -246,23 +270,23 @@ classdef adaptiveFoot
         function obj = optimalLongitudinalFootPlacement(obj, Nsteps, xdcm, currentStanceFootPosition)
             import casadi.*
             % longitudinal dcm offset
-            b = SX.sym('b', 6);
+            b = SX.sym('b', 2*Nsteps);
             % longitudinal foot placement
-            s = SX.sym('s', 3);
+            s = SX.sym('s', 2*Nsteps);
             % objective function
             objectiveFunction = (b-obj.dcmXSteady)'*(b-obj.dcmXSteady);
             % equality constraints
-            d_min = obj.a_min(1)*(exp(obj.omega*obj.stepDuration)-1)/(obj.omega*obj.omega);
-            d_max = obj.a_max(1)*(exp(obj.omega*obj.stepDuration)-1)/(obj.omega*obj.omega);
             deltaT = obj.deltaTransformation(obj.stepDuration);
             deltaTLeftover = obj.deltaTransformation(obj.leftoverTime);
-            g=deltaTLeftover*(s(1)+b(1)+d_min) - xdcm;
-            g=[g; deltaTLeftover*(s(1)+b(2)+d_max)-xdcm];
-            g=[g; deltaT*(s(2)+b(3)+d_min)-b(1)];
-            g=[g; deltaT*(s(2)+b(4)+d_max)-b(1)];
-            g=[g; deltaT*(s(3)+b(5)+d_min)-b(2)];
-            g=[g; deltaT*(s(3)+b(6)+d_max)-b(2)];
-
+            g=deltaTLeftover*(s(1)+b(1)) - xdcm(1);
+            for i=2:Nsteps
+                g=[g; deltaT*(s(i)+b(i))-b(i-1)];
+            end
+            g=[g; deltaTLeftover*(s(Nsteps+1)+b(Nsteps+1)) - xdcm(2)];
+            for i=Nsteps+2:2*Nsteps
+                g=[g; deltaT*(s(i)+b(i))-b(i-1)];
+            end
+            g=[g; s(1)-s(Nsteps+1)];
             p=[];
             % Decision variables are dcmOffset b and step width s.
             nlp_prob = struct('f', objectiveFunction, 'x', [b;s], 'g',g,'p',p);
@@ -289,8 +313,8 @@ classdef adaptiveFoot
             sol = solver('x0', args.x0, 'lbx', args.lbx, 'ubx', args.ubx,...
                 'lbg', args.lbg, 'ubg', args.ubg,'p',args.p);
             x_sol = full(sol.x);           % Get the solution
-            dcmOptimal = x_sol(1:6);
-            stepLengthOptimal = x_sol(7:9);
+            dcmOptimal = x_sol(1:2*Nsteps);
+            stepLengthOptimal = x_sol(2*Nsteps+1:4*Nsteps);
             obj.optimalDCMOffsetX = dcmOptimal;
             obj.optimalStanceFootX = stepLengthOptimal;
         end
@@ -298,53 +322,46 @@ classdef adaptiveFoot
         function obj = optimalLateralFootPlacement(obj, Nsteps, ydcm, currentStanceFootPosition)
             import casadi.*
             % dcm offset
-            b = SX.sym('b', 6);
+            b = SX.sym('b', 2*Nsteps);
             % lateral foot placement
-            s = SX.sym('s', 3);
+            s = SX.sym('s', 2*Nsteps);
             leftFoot = [];
             rightFoot = [];
             leftDCM = [];
             rightDCM = [];
             leftwidth = [];
             rightwidth = [];
-
-            % for step length and dcm
+            % up bound 
             stanceFootPosition = currentStanceFootPosition;
-            if obj.stanceFootSeq(1)==0
-                % left foot
-                leftFoot=[leftFoot, stanceFootPosition+s(1)];
-                leftwidth = [leftwidth, s(1)];
-                leftDCM = [leftDCM, b(1)];
-                leftDCM = [leftDCM, b(2)];
-            else
-                % right foot
-                rightFoot=[rightFoot, stanceFootPosition+s(1)];
-                rightwidth = [rightwidth, s(1)];
-                rightDCM = [rightDCM, b(1)];
-                rightDCM = [rightDCM, b(2)];
-            end
-            stanceFootPosition = stanceFootPosition+s(1);
-            for i=2:3
-                if obj.stanceFootSeq(2)==0
+            for i=1:Nsteps
+                if obj.stanceFootSeq(i)==0
                     % left foot
                     leftFoot=[leftFoot, stanceFootPosition+s(i)];
+                    leftDCM = [leftDCM, b(i)];
                     leftwidth = [leftwidth, s(i)];
                 else
                     % right foot
                     rightFoot=[rightFoot, stanceFootPosition+s(i)];
+                    rightDCM = [rightDCM, b(i)];
                     rightwidth = [rightwidth, s(i)];
                 end
+                stanceFootPosition = stanceFootPosition+s(i);
             end
-            
-            % for dcm
-            for i=3:6
-                if obj.stanceFootSeq(2)==0
+            % low bound
+            stanceFootPosition = currentStanceFootPosition;
+            for i=1:Nsteps
+                if obj.stanceFootSeq(i)==0
                     % left foot
-                    leftDCM = [leftDCM, b(i)];
+                    leftFoot=[leftFoot, stanceFootPosition+s(i+Nsteps)];
+                    leftDCM = [leftDCM, b(i+Nsteps)];
+                    leftwidth = [leftwidth, s(i+Nsteps)];
                 else
                     % right foot
-                    rightDCM = [rightDCM, b(i)];
+                    rightFoot=[rightFoot, stanceFootPosition+s(i+Nsteps)];
+                    rightDCM = [rightDCM, b(i+Nsteps)];
+                    rightwidth = [rightwidth, s(i+Nsteps)];
                 end
+                stanceFootPosition = stanceFootPosition+s(i+Nsteps);
             end
 
             % objective function
@@ -357,17 +374,17 @@ classdef adaptiveFoot
                 + 0*(leftDCM-leftDCMSteady)*(leftDCM-leftDCMSteady)' + 0*(rightDCM-rightDCMSteady)*(rightDCM-rightDCMSteady)'...
                 + 1*(leftwidth-obj.stepWidthSteady)*(leftwidth-obj.stepWidthSteady)' + 1*(rightwidth-obj.stepWidthSteady)*(rightwidth-obj.stepWidthSteady)';
             % equality constraint
-            d_min = obj.a_min(2)*(exp(obj.omega*obj.stepDuration)-1)/(obj.omega*obj.omega);
-            d_max = obj.a_max(2)*(exp(obj.omega*obj.stepDuration)-1)/(obj.omega*obj.omega);
             deltaT = obj.deltaTransformation(obj.stepDuration);
             deltaTLeftover = obj.deltaTransformation(obj.leftoverTime);
-            g=deltaTLeftover*(s(1)+b(1)+d_min) - ydcm;
-            g=[g; deltaTLeftover*(s(1)+b(2)+d_max)-ydcm];
-            g=[g; deltaT*(s(2)+b(3)+d_min)-b(1)];
-            g=[g; deltaT*(s(2)+b(4)+d_max)-b(1)];
-            g=[g; deltaT*(s(3)+b(5)+d_min)-b(2)];
-            g=[g; deltaT*(s(3)+b(6)+d_max)-b(2)];
-            
+            g=deltaTLeftover*(s(1)+b(1)) - ydcm(1);
+            for i=2:Nsteps
+                g=[g; deltaT*(s(i)+b(i))-b(i-1)];
+            end
+            g=[g; deltaTLeftover*(s(Nsteps+1)+b(Nsteps+1)) - ydcm(2)];
+            for i=Nsteps+2:2*Nsteps
+                g=[g; deltaT*(s(i)+b(i))-b(i-1)];
+            end
+            g=[g; s(1)-s(Nsteps+1)];
             p=[];
             % Decision variables are dcmOffset b and step width s.
             nlp_prob = struct('f', objectiveFunction, 'x', [b;s], 'g',g,'p',p);
@@ -387,65 +404,63 @@ classdef adaptiveFoot
             % initial guess
             dcmOffsetInitialGuess = ones(size(b));
             stanceFootInitialGuess = ones(size(s));
-
-            if obj.stanceFootSeq(1)==0
-                % left foot
-
-                dcmOffsetLowerBound(1)=obj.leftStepDcmOffsetMin;
-                dcmOffsetUpperBound(1)=obj.leftStepDcmOffsetMax;
-                dcmOffsetInitialGuess(1)=dcmOffsetUpperBound(1);
-
-                dcmOffsetLowerBound(2)=obj.leftStepDcmOffsetMin;
-                dcmOffsetUpperBound(2)=obj.leftStepDcmOffsetMax;
-                dcmOffsetInitialGuess(2)=dcmOffsetUpperBound(2);
-
-                stepWidthLowerBound(1)=obj.leftStepWidthMin;
-                stepWidthUpperBound(1)=obj.leftStepWidthMax;
-                stanceFootInitialGuess(1)=stepWidthUpperBound(1);
-
-            else
-                % right foot
-                dcmOffsetLowerBound(1)=obj.rightStepDcmOffsetMin;
-                dcmOffsetUpperBound(1)=obj.rightStepDcmOffsetMax;
-                dcmOffsetInitialGuess(1)=dcmOffsetUpperBound(1);
-
-                dcmOffsetLowerBound(2)=obj.rightStepDcmOffsetMin;
-                dcmOffsetUpperBound(2)=obj.rightStepDcmOffsetMax;
-                dcmOffsetInitialGuess(2)=dcmOffsetUpperBound(2);
-
-                stepWidthLowerBound(1)=obj.rightStepWidthMin;
-                stepWidthUpperBound(1)=obj.rightStepWidthMax;
-                stanceFootInitialGuess(1)=stepWidthUpperBound(1);
-
-            end
-            if obj.stanceFootSeq(2)==0
-                % left foot
-                for i = 3:6
+            for i=1:Nsteps
+                if obj.stanceFootSeq(i)==0
+                    % left foot
+                    % up
                     dcmOffsetLowerBound(i)=obj.leftStepDcmOffsetMin;
                     dcmOffsetUpperBound(i)=obj.leftStepDcmOffsetMax;
+                    stepWidthLowerBound(i)=obj.leftStepWidthMin;
+                    stepWidthUpperBound(i)=obj.leftStepWidthMax;
                     dcmOffsetInitialGuess(i)=dcmOffsetUpperBound(i);
-                end
-                
-                for j = 2:3
-                    stepWidthLowerBound(j)=obj.leftStepWidthMin;
-                    stepWidthUpperBound(j)=obj.leftStepWidthMax;
-                    stanceFootInitialGuess(j)=stepWidthUpperBound(j);
-                end
-
-            else
-                % right foot
-                for i = 3:6
+                    stanceFootInitialGuess(i)=stepWidthUpperBound(i);
+                    % low
+                    dcmOffsetLowerBound(i+Nsteps)=obj.leftStepDcmOffsetMin;
+                    dcmOffsetUpperBound(i+Nsteps)=obj.leftStepDcmOffsetMax;
+                    stepWidthLowerBound(i+Nsteps)=obj.leftStepWidthMin;
+                    stepWidthUpperBound(i+Nsteps)=obj.leftStepWidthMax;
+                    dcmOffsetInitialGuess(i+Nsteps)=dcmOffsetUpperBound(i+Nsteps);
+                    stanceFootInitialGuess(i+Nsteps)=stepWidthUpperBound(i+Nsteps);
+                else
+                    % right foot
+                    % up
                     dcmOffsetLowerBound(i)=obj.rightStepDcmOffsetMin;
                     dcmOffsetUpperBound(i)=obj.rightStepDcmOffsetMax;
+                    stepWidthLowerBound(i)=obj.rightStepWidthMin;
+                    stepWidthUpperBound(i)=obj.rightStepWidthMax;
                     dcmOffsetInitialGuess(i)=dcmOffsetUpperBound(i);
+                    stanceFootInitialGuess(i)=stepWidthUpperBound(i);
+                    % low
+                    dcmOffsetLowerBound(i+Nsteps)=obj.rightStepDcmOffsetMin;
+                    dcmOffsetUpperBound(i+Nsteps)=obj.rightStepDcmOffsetMax;
+                    stepWidthLowerBound(i+Nsteps)=obj.rightStepWidthMin;
+                    stepWidthUpperBound(i+Nsteps)=obj.rightStepWidthMax;
+                    dcmOffsetInitialGuess(i+Nsteps)=dcmOffsetUpperBound(i+Nsteps);
+                    stanceFootInitialGuess(i+Nsteps)=stepWidthUpperBound(i+Nsteps);
                 end
+                if i==Nsteps
+                    % if this is the last step
+                    if obj.stanceFootSeq(i)==0
+                        % left foot
+                        dcmOffsetLowerBound(i)=-obj.dcmYSteady;
+                        dcmOffsetUpperBound(i)=-obj.dcmYSteady;
 
-                for j = 2:3
-                    stepWidthLowerBound(j)=obj.rightStepWidthMin;
-                    stepWidthUpperBound(j)=obj.rightStepWidthMax;
-                    stanceFootInitialGuess(j)=stepWidthUpperBound(j);
+                        dcmOffsetLowerBound(i+Nsteps)=-obj.dcmYSteady;
+                        dcmOffsetUpperBound(i+Nsteps)=-obj.dcmYSteady;
+                    else
+                        % right foot
+                        dcmOffsetLowerBound(i)=obj.dcmYSteady;
+                        dcmOffsetUpperBound(i)=obj.dcmYSteady;
+
+                        dcmOffsetLowerBound(i+Nsteps)=obj.dcmYSteady;
+                        dcmOffsetUpperBound(i+Nsteps)=obj.dcmYSteady;
+                    end
+                    dcmOffsetInitialGuess(i)=dcmOffsetUpperBound(i);
+                    stanceFootInitialGuess(i)=stepWidthUpperBound(i);
+
+                    dcmOffsetInitialGuess(i+Nsteps)=dcmOffsetUpperBound(i+Nsteps);
+                    stanceFootInitialGuess(i+Nsteps)=stepWidthUpperBound(i+Nsteps);
                 end
-
             end
 
             args.lbx = [ dcmOffsetLowerBound; stepWidthLowerBound];
@@ -462,8 +477,8 @@ classdef adaptiveFoot
                 'lbg', args.lbg, 'ubg', args.ubg,'p',args.p);
             x_sol = full(sol.x);           % Get the solution
 
-            dcmOptimal = x_sol(1:6);
-            stepWidthOptimal = x_sol(7:9);
+            dcmOptimal = x_sol(1:2*Nsteps);
+            stepWidthOptimal = x_sol(2*Nsteps+1:4*Nsteps);
             obj.optimalDCMOffsetY = dcmOptimal;
             obj.optimalStanceFootY = stepWidthOptimal;
         end
