@@ -48,7 +48,7 @@ zmpController = contingencyMPC(comHeight, footHalfLength, footHalfWidth, ddxy_s_
 % T_periody = 0.6;
 Ax = 0;
 T_periodx = 0;
-Ay = 2.5;
+Ay = 4.5;
 T_periody = 2;
 
 last_acc = [0;0];

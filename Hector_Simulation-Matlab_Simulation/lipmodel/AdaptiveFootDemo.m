@@ -1,114 +1,104 @@
 clear
 clc
 close all
-set(groot, 'defaulttextinterpreter','latex')
-set(groot, 'defaultaxesticklabelinterpreter','latex')
-set(groot, 'defaultlegendinterpreter','latex')
+addpath(genpath("./casadi-3"))
 
-ddxy_s_max = [15;15];
-ddxy_s_min = [-15;-15];
 
 comHeight=0.525;% center of mass height
 stepDuration=0.2;%sec
-averageSpeed=0.5;%m/s
+averageSpeed=0.4;%m/s
 stepWidth=0.2;%m
 g=9.8;%m/s^2
 omega=sqrt(g/comHeight);
+ddxy_s_max = [3;3];
+ddxy_s_min = [-3;-3];
 
-footPlanner=adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth, ddxy_s_max, ddxy_s_min);
+footPlanner=adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth,ddxy_s_max, ddxy_s_min,0,0);
 % obj.drawPeriodicGait(5);
-Nsteps=5; % number of steps that planner plans ahead
+Nsteps=2; % number of steps that planner plans ahead
 currentStanceFootID=0; % 0 means left foot is stance foot. 1 means right foot is stance foot 
 currentStanceFootPosition=[0.0; 0.1];
-xi=[0;0];% divergent component of motion x,y
-x_com = [0;0;0;0];
+xi=[0.03;0];% divergent component of motion x,y
 currentZMP = [0;0.1];
 timeVector=[];
 xiVector=[];
 zmpVector=[];
-comVector=[];
+disturbanceVector=[];
+surfaceMotionVector=[];
+totalTime = 400;
+deltaT=0.01;
+stepDurationTic=round(stepDuration*100);
 
-% moving surface
-Ax = 0.05;
-T_periodx = 1.6;
-Ay = 0;
-T_periody = 0.6;
+distbancePeriod = 0.75;
+Amplitude=0.05;
+sinFunc = @(t) Amplitude*sin(2*pi/distbancePeriod*t);
 
-dx = Ax*2*pi/T_periodx;
-dy = Ay*2*pi/T_periody;
-x = 0;
-y = 0;
+for i=1:totalTime
+    currentTime=deltaT*i;
+    timeVector=[timeVector, currentTime];
+    footPlanner=footPlanner.findOptimalFootPlacement(Nsteps,xi,currentStanceFootID,currentStanceFootPosition,currentTime);
+    xiVector=[xiVector, xi];
+    % if mod(i,40) == 0
+    %     footPlanner.drawOptimalFootPlacement()
+    % end
+    % footPlanner.drawPeriodicGait(7)
 
-for i=1:300
-    if mod(i,20) == 0
-        % assume the swing leg end at desired second foot placement from footPlanner
-        currentStanceFootPosition = [footPlanner.stanceFootConstraint.Up_ankleX(2);footPlanner.stanceFootConstraint.Up_ankleY(2)];
-        currentStanceFootID = mod(floor(i/20),2);
-        footPlanner.drawOptimalFootPlacement()
-        zmpController.drawZMPPreviewAndConstraint()
+    surfaceMotion_x = sinFunc(currentTime);
+    surfaceMotionVector = [surfaceMotionVector [surfaceMotion_x;0]];
+
+    disturbance_x = -(2*pi/distbancePeriod)^2*sinFunc(currentTime);
+    disturbance = [disturbance_x;0];
+    xi = LIPModel(xi, omega, deltaT, currentStanceFootPosition, disturbance);
+    disturbanceVector = [disturbanceVector disturbance];
+    zmpVector = [zmpVector, currentStanceFootPosition];
+
+    currentStanceFootID = mod(floor((i+1)/stepDurationTic),2);
+    prevStanceFootID = mod(floor((i)/stepDurationTic),2);
+    if currentStanceFootID == prevStanceFootID
+        nextStanceFootPosition = [footPlanner.stanceFootConstraint.Up_ankleX(1); footPlanner.stanceFootConstraint.Up_ankleY(1)];
+    else
+        nextStanceFootPosition = [footPlanner.stanceFootConstraint.Up_ankleX(2); footPlanner.stanceFootConstraint.Up_ankleY(2)];
+    end
+    
+    currentStanceFootPosition = nextStanceFootPosition;
+
+    if xi(1)-currentStanceFootPosition(1) > 0.3 
+        % if dcm offset is higher than this value, consider the robot falls
+        fprintf("currentTime: %f, %s \n", currentTime, "fall due to x")
+        break;
     end
 
-    currentTime=0.01*i;
-    timeVector=[timeVector, currentTime];
-
-    % moving surface
-    ddx = -Ax*2*pi/T_periodx*2*pi/T_periodx*sin(currentTime*2*pi/T_periodx);
-    ddy = -Ay*2*pi/T_periody*2*pi/T_periody*sin(currentTime*2*pi/T_periody);
-    ddxy_s = [ddx;ddy];
-
-    footPlanner=footPlanner.findOptimalFootPlacement(Nsteps,xi,currentStanceFootID,currentStanceFootPosition,currentTime,[1;0]);
-    xiVector=[xiVector, xi];
-    comVector=[comVector x_com];
-    % footPlanner.drawOptimalFootPlacement()
-    footHalfLength=0.06;
-    footHalfWidth=0.01;
-    zmpController = contingencyMPC(comHeight, footHalfLength, footHalfWidth, ddxy_s_max, ddxy_s_min);
-    zmpVector=[zmpVector, currentZMP];
-    zmpController = zmpController.MPC(xi, currentZMP, currentTime, footPlanner.stanceFootConstraint,ddxy_s);
-     zmpController.drawZMPPreviewAndConstraint()
-    % footPlanner.drawPeriodicGait(5)
-    optimalZMP = zmpController.getOptimalZMP();
-    x_com = lip_dynamics(x_com,currentStanceFootPosition,ddxy_s,0.01,comHeight,g);
-    xi(1)=x_com(1)+x_com(2)/omega;
-    xi(2)=x_com(3)+x_com(4)/omega;
-    % xi(1)=(xi(1)-optimalZMP(1))*exp(omega*0.01)+optimalZMP(1);
-    % xi(2)=(xi(2)-optimalZMP(2))*exp(omega*0.01)+optimalZMP(2);
-    % currentZMP=currentStanceFootPosition;
-    currentZMP=optimalZMP;
-end
-% footPlanner.drawOptimalFootPlacement()
-% zmpController.drawZMPPreviewAndConstraint()
-% figure,plot(timeVector,zmpVector(1,:),'-')
-% hold on,plot(timeVector, xiVector(1,:),'-')
-% legend("zmp x","\xi_u^x");
-% figure,plot(timeVector,zmpVector(2,:),'-')
-% hold on,plot(timeVector, xiVector(2,:),'-')
-% legend("zmp y","\xi_u^y");
-
-figure,plot(zmpVector(1,:),zmpVector(2,:),'-')
-hold on,plot(comVector(1,:),comVector(3,:),'-')
-plot(xiVector(1,:),xiVector(2,:))
-legend("zmp","com","\xi_u");
-axis equal
-
-%% dynamic equation
-function X_next = lip_dynamics(X,u,ddxy_s,dT,L,g)
-
-A1 = [1 dT;
-     g/L*dT 1];
- 
-B1 = [0;
-     -dT*g/L];
-
-C1 = [0;
-     -ddxy_s(1)*dT];
-C2 = [0;
-     -ddxy_s(2)*dT];
-
-A = blkdiag(A1,A1);
-B = blkdiag(B1,B1);
-C = [C1;
-     C2];
-X_next = A*X + B*u + C;
+    if abs(xi(2)-currentStanceFootPosition(2)) > 0.3
+        % if dcm offset is higher than this value, consider the robot falls
+        fprintf("currentTime: %f, %s \n", currentTime, "fall due to y")
+        break;
+    end
 
 end
+
+figure,plot(timeVector,zmpVector(1,:),'o-')
+hold on,plot(timeVector, xiVector(1,:),'.-')
+hold on,plot(timeVector, xiVector(1,:)-zmpVector(1,:),'.-')
+legend("zmp x","xiux", "x dcm offset");
+xlabel("t(sec)")
+ylabel("x(m)")
+
+figure,plot(timeVector,zmpVector(2,:),'o-')
+hold on,plot(timeVector, xiVector(2,:),'.-')
+hold on,plot(timeVector, xiVector(2,:)-zmpVector(2,:),'.-')
+legend("zmp y","xiuy", "y dcm offset");
+xlabel("t(sec)")
+ylabel("y(m)")
+
+
+figure,plot(timeVector, disturbanceVector(1,:),'.-')
+hold on,plot(timeVector, disturbanceVector(2,:),'.-')
+hold on,plot(timeVector, surfaceMotionVector(1,:),'.-')
+xlabel("t(sec)")
+ylabel("x/y acceleration (m/s/s)")
+legend("x acceleration", "y acceleration", "x position")
+
+figure,plot(zmpVector(1,:),zmpVector(2,:),'o-')
+% legend("zmp x","xiux", "x dcm offset");
+xlabel("x(m)")
+ylabel("y(m)")

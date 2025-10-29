@@ -252,12 +252,14 @@ classdef adaptiveFoot
             % objective function
             objectiveFunction = (b-obj.dcmXSteady)'*(b-obj.dcmXSteady);
             % equality constraints
+            d_min1 = obj.a_min(1)*(exp(obj.omega*obj.leftoverTime)-1)/(obj.omega*obj.omega);
+            d_max1 = obj.a_max(1)*(exp(obj.omega*obj.leftoverTime)-1)/(obj.omega*obj.omega);
             d_min = obj.a_min(1)*(exp(obj.omega*obj.stepDuration)-1)/(obj.omega*obj.omega);
             d_max = obj.a_max(1)*(exp(obj.omega*obj.stepDuration)-1)/(obj.omega*obj.omega);
             deltaT = obj.deltaTransformation(obj.stepDuration);
             deltaTLeftover = obj.deltaTransformation(obj.leftoverTime);
-            g=deltaTLeftover*(s(1)+b(1)+d_min) - xdcm;
-            g=[g; deltaTLeftover*(s(1)+b(2)+d_max)-xdcm];
+            g=deltaTLeftover*(s(1)+b(1)+d_min1) - xdcm;
+            g=[g; deltaTLeftover*(s(1)+b(2)+d_max1)-xdcm];
             g=[g; deltaT*(s(2)+b(3)+d_min)-b(1)];
             g=[g; deltaT*(s(2)+b(4)+d_max)-b(1)];
             g=[g; deltaT*(s(3)+b(5)+d_min)-b(2)];
@@ -357,12 +359,14 @@ classdef adaptiveFoot
                 + 0*(leftDCM-leftDCMSteady)*(leftDCM-leftDCMSteady)' + 0*(rightDCM-rightDCMSteady)*(rightDCM-rightDCMSteady)'...
                 + 1*(leftwidth-obj.stepWidthSteady)*(leftwidth-obj.stepWidthSteady)' + 1*(rightwidth-obj.stepWidthSteady)*(rightwidth-obj.stepWidthSteady)';
             % equality constraint
+            d_min1 = obj.a_min(2)*(exp(obj.omega*obj.leftoverTime)-1)/(obj.omega*obj.omega);
+            d_max1 = obj.a_max(2)*(exp(obj.omega*obj.leftoverTime)-1)/(obj.omega*obj.omega);
             d_min = obj.a_min(2)*(exp(obj.omega*obj.stepDuration)-1)/(obj.omega*obj.omega);
             d_max = obj.a_max(2)*(exp(obj.omega*obj.stepDuration)-1)/(obj.omega*obj.omega);
             deltaT = obj.deltaTransformation(obj.stepDuration);
             deltaTLeftover = obj.deltaTransformation(obj.leftoverTime);
-            g=deltaTLeftover*(s(1)+b(1)+d_min) - ydcm;
-            g=[g; deltaTLeftover*(s(1)+b(2)+d_max)-ydcm];
+            g=deltaTLeftover*(s(1)+b(1)+d_min1) - ydcm;
+            g=[g; deltaTLeftover*(s(1)+b(2)+d_max1)-ydcm];
             g=[g; deltaT*(s(2)+b(3)+d_min)-b(1)];
             g=[g; deltaT*(s(2)+b(4)+d_max)-b(1)];
             g=[g; deltaT*(s(3)+b(5)+d_min)-b(2)];
