@@ -11,7 +11,8 @@ stepWidth=0.2;%m
 g=9.8;%m/s^2
 omega=sqrt(g/comHeight);
 
-footPlanner=adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth);
+% footPlanner=adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth);
+footPlanner=scenairoTree_adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth);
 % obj.drawPeriodicGait(5);
 Nsteps=3; % number of steps that planner plans ahead
 currentStanceFootID=0; % 0 means left foot is stance foot. 1 means right foot is stance foot 
@@ -23,18 +24,17 @@ xiVector=[];
 zmpVector=[];
 disturbanceVector=[];
 surfaceMotionVector=[];
-totalTime = 400;
+totalTime = 375;
 deltaT=0.01;
 stepDurationTic=round(stepDuration*100);
 
 distbancePeriod = 1;
-Amplitude=0.05;
+Amplitude=0.25;
 sinFunc = @(t) Amplitude*sin(2*pi/distbancePeriod*t);
 
 for i=1:totalTime
     currentTime=deltaT*i;
     timeVector=[timeVector, currentTime];
-    footPlanner=footPlanner.findOptimalFootPlacement(Nsteps,xi,currentStanceFootID,currentStanceFootPosition,currentTime);
     xiVector=[xiVector, xi];
     % if mod(i,40) == 0
     %     footPlanner.drawOptimalFootPlacement()
@@ -46,6 +46,8 @@ for i=1:totalTime
 
     disturbance_x = -(2*pi/distbancePeriod)^2*sinFunc(currentTime);
     disturbance = [disturbance_x;0];
+    % footPlanner=footPlanner.findOptimalFootPlacement(Nsteps,xi,currentStanceFootID,currentStanceFootPosition,currentTime);
+    footPlanner=footPlanner.findOptimalFootPlacement(Nsteps,xi,currentStanceFootID,currentStanceFootPosition,currentTime,disturbance);
     xi = LIPModel(xi, omega, deltaT, currentStanceFootPosition, disturbance);
     disturbanceVector = [disturbanceVector disturbance];
     zmpVector = [zmpVector, currentStanceFootPosition];
@@ -60,7 +62,7 @@ for i=1:totalTime
     
     currentStanceFootPosition = nextStanceFootPosition;
 
-    if xi(1)-currentStanceFootPosition(1) > 0.3 
+    if xi(1)-currentStanceFootPosition(1) > 1 
         % if dcm offset is higher than this value, consider the robot falls
         fprintf("currentTime: %f, %s \n", currentTime, "fall due to x")
         break;
