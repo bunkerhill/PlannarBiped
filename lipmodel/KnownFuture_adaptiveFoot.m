@@ -1,4 +1,4 @@
-classdef adaptiveFoot
+classdef KnownFuture_adaptiveFoot
     %ADAPTIVEFOOT Summary of this class goes here
     %   Detailed explanation goes here
     properties
@@ -64,10 +64,18 @@ classdef adaptiveFoot
 
         % stance foot constraint used by ZMP MPC
         stanceFootConstraint
+
+        % current time
+        currentTime
+
+        % sine wave
+        A
+        ws
+        d
     end
     
     methods
-        function obj = adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth)
+        function obj = KnownFuture_adaptiveFoot(comHeight, stepDuration, averageSpeed, stepWidth)
             %ADAPTIVEFOOT Construct an instance of this class
             %   Detailed explanation goes here
             obj.g = 9.8; % m/s^2
@@ -120,7 +128,10 @@ classdef adaptiveFoot
             end
         end
 
-        function obj = findOptimalFootPlacement(obj, Nsteps, xi, currentStanceFoot, currentStanceFootPosition, currentTime)
+        function obj = findOptimalFootPlacement(obj, Nsteps, xi, currentStanceFoot, currentStanceFootPosition, currentTime, A, ws)
+            obj.A = A;
+            obj.ws = ws;
+            obj.currentTime = currentTime;
             obj.leftoverTime=obj.stepDuration - mod(currentTime, obj.stepDuration);
             obj=obj.getStanceFootSequence(Nsteps, currentStanceFoot);
             obj.xiInitial = xi;
@@ -210,13 +221,21 @@ classdef adaptiveFoot
                 stanceFootPosition=stanceFootPosition+s(i);
             end
             % objective function
-            objectiveFunction = (b-obj.dcmXSteady)'*(b-obj.dcmXSteady);
+            % objectiveFunction = (b-obj.dcmXSteady)'*(b-obj.dcmXSteady);
+            objectiveFunction = (b-obj.dcmXSteady)'*(b-obj.dcmXSteady)+0.25*(s-obj.stepLengthSteady)'*(s-obj.stepLengthSteady);
             % equality constraints
             deltaT = obj.deltaTransformation(obj.stepDuration);
             deltaTLeftover = obj.deltaTransformation(obj.leftoverTime);
-            g=deltaTLeftover*(s(1)+b(1)) - xdcm;
+            Tvec = obj.stepDuration*ones(Nsteps,1);
+            Tvec(1) = obj.leftoverTime;
+            t0 = obj.currentTime;
+            Omega = obj.omega;
+
+            d = d_from_sine(obj.A, obj.ws, Omega, t0, Tvec);
+            obj.d = d;
+            g=deltaTLeftover*(s(1)+b(1)-d(1)) - xdcm;
             for i=2:Nsteps
-                g=[g; deltaT*(s(i)+b(i))-b(i-1)];
+                g=[g; deltaT*(s(i)+b(i)-d(i))-b(i-1)];
             end
             p=[];
             % Decision variables are dcmOffset b and step width s.
@@ -407,4 +426,33 @@ classdef adaptiveFoot
         end
     end
 end
+
+function d = d_from_sine(A, ws, Omega, t0, Tvec)
+% d_from_sine  计算每步扰动 d_k，a(t)=A*sin(ws*t)
+% 输入:
+%   A      : 振幅
+%   ws     : 正弦角频率 (地面加速度的频率)
+%   Omega  : LIP 频率 √(g/l)  (你的论文里用 ω)
+%   t0     : 当前时刻 (第一步的起点)
+%   Tvec   : 每步时长向量 [T0, T1, ..., T_{N-1}]（第一步可用leftover时间）
+% 输出:
+%   d      : 每步的 d_k (列向量)
+
+N  = numel(Tvec);
+tk = zeros(N+1,1);         % 步起止时刻
+tk(1) = t0;
+for k = 1:N
+    tk(k+1) = tk(k) + Tvec(k);
+end
+
+coef = A / (Omega*(Omega^2 + ws^2));
+d = zeros(N,1);
+for k = 1:N
+    Dt = tk(k+1) - tk(k);
+    term1 = Omega*sin(ws*tk(k+1)) + ws*cos(ws*tk(k+1));
+    term0 = Omega*sin(ws*tk(k  )) + ws*cos(ws*tk(k  ));
+    d(k)  = coef * ( term1 - exp(Omega*Dt)*term0 );
+end
+end
+
 

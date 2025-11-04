@@ -210,7 +210,7 @@ classdef adaptiveFoot
                 stanceFootPosition=stanceFootPosition+s(i);
             end
             % objective function
-            objectiveFunction = (b-obj.dcmXSteady)'*(b-obj.dcmXSteady);
+            objectiveFunction = (b-obj.dcmXSteady)'*(b-obj.dcmXSteady)+0.25*(s-obj.stepLengthSteady)'*(s-obj.stepLengthSteady);
             % equality constraints
             deltaT = obj.deltaTransformation(obj.stepDuration);
             deltaTLeftover = obj.deltaTransformation(obj.leftoverTime);

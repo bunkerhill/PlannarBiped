@@ -67,6 +67,17 @@ classdef scenairoTree_adaptiveFoot
 
         % current acc
         acc
+
+        dcmOffsetX
+        dcmOffsetY
+
+        BNmin
+        BNmax
+        dNmin
+        dNmax
+
+        deltaT
+        disturbance
     end
     
     methods
@@ -130,6 +141,7 @@ classdef scenairoTree_adaptiveFoot
             obj.stanceFootInitial=currentStanceFootPosition;
             dcmOffsetX = xi(1)-currentStanceFootPosition(1);
             dcmOffsetY = xi(2)-currentStanceFootPosition(2);
+            obj.dcmOffsetX = dcmOffsetX;
             obj.acc = acc;
             obj=obj.optimalLongitudinalFootPlacement(Nsteps, dcmOffsetX, currentStanceFootPosition(1));
             obj=obj.optimalLateralFootPlacement(Nsteps, dcmOffsetY, currentStanceFootPosition(2));
@@ -265,8 +277,11 @@ classdef scenairoTree_adaptiveFoot
             deltaT = exp(obj.omega*obj.stepDuration);
             deltaTLeftover = exp(obj.omega*obj.leftoverTime);
 
+            obj.deltaT = deltaT;
+
             % Calculate all d min and max
             disturbance = two_step_bounds(obj.acc(1), a_min, a_max, j_min, j_max, obj.stepDuration, obj.omega, obj.leftoverTime);
+            obj.disturbance = disturbance;
 
             % level-1 的两个子节点状态是 bL2(1), bL2(2)：
             %   bL2(1) = a*b0 - u1 + d0_min
@@ -320,6 +335,12 @@ classdef scenairoTree_adaptiveFoot
             uNmin = obj.stepLengthMin*ones(8,1);
             BNmax = (uNmax-dNmax)/(deltaT-1);
             BNmin = (uNmin-dNmin)/(deltaT-1);
+
+            obj.BNmax = BNmax;
+            obj.BNmin = BNmin;
+
+            obj.dNmax = dNmax;
+            obj.dNmin = dNmin;
 
             stepLengthLowerBound=obj.stepLengthMin*ones(size(s));
             stepLengthUpperBound=obj.stepLengthMax*ones(size(s));
