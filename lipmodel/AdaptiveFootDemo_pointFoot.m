@@ -25,12 +25,12 @@ xiVector=[];
 zmpVector=[];
 disturbanceVector=[];
 surfaceMotionVector=[];
-totalTime = 200;
+totalTime = 259;
 deltaT=0.01;
 stepDurationTic=round(stepDuration*100);
 
 distbancePeriod = 2;
-Amplitude=0.19;
+Amplitude=0.37;
 sinFunc = @(t) Amplitude*sin(2*pi/distbancePeriod*t);
 
 for i=1:totalTime
@@ -64,7 +64,7 @@ for i=1:totalTime
     
     currentStanceFootPosition = nextStanceFootPosition;
 
-    if abs(xi(1)-currentStanceFootPosition(1)) > 0.3 
+    if abs(xi(1)-currentStanceFootPosition(1)) > 0.4 
         % if dcm offset is higher than this value, consider the robot falls
         fprintf("currentTime: %f, %s \n", currentTime, "fall due to x")
         break;

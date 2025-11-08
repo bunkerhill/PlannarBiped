@@ -208,10 +208,10 @@ classdef scenairoTree_adaptiveFoot
 
 
         function obj = optimalLongitudinalFootPlacement(obj, Nsteps, xdcm, currentStanceFootPosition)
-            a_min = -8;
-            a_max = 8;
-            j_min = -54;
-            j_max = 54;
+            a_min = -3.65;
+            a_max = 3.65;
+            j_min = -11.47;
+            j_max = 11.47;
             import casadi.*
             % % longitudinal dcm offset
             % b = SX.sym('b', Nsteps);
@@ -327,6 +327,8 @@ classdef scenairoTree_adaptiveFoot
             opts.ipopt.acceptable_obj_change_tol = 1e-6; 
             solver = nlpsol('solver', 'ipopt', nlp_prob,opts);
             args = struct;
+            % dcmOffsetLowerBound= obj.longitudinalDCMOffsetMin*ones(size(b));
+            % dcmOffsetUpperBound= obj.longitudinalDCMOffsetMax*ones(size(b));
             dcmOffsetLowerBound= obj.longitudinalDCMOffsetMin*ones(6,1);
             dcmOffsetUpperBound= obj.longitudinalDCMOffsetMax*ones(6,1);
             dNmax = d24_max*ones(8,1);
@@ -346,6 +348,8 @@ classdef scenairoTree_adaptiveFoot
             stepLengthUpperBound=obj.stepLengthMax*ones(size(s));
             args.lbx=[dcmOffsetLowerBound; BNmin; stepLengthLowerBound];
             args.ubx=[dcmOffsetUpperBound; BNmax; stepLengthUpperBound];
+            % args.lbx=[dcmOffsetLowerBound; stepLengthLowerBound];
+            % args.ubx=[dcmOffsetUpperBound; stepLengthUpperBound];
             args.lbg=zeros(size(g));
             args.ubg=zeros(size(g));
             args.p=[];
@@ -540,8 +544,8 @@ function out = two_step_bounds(a0, a_min, a_max, j_min, j_max, Tc, omega, leftov
 a1_min = max(a_min, a0 + j_min*leftoverTime);
 a1_max = min(a_max, a0 + j_max*leftoverTime);
 % ---------- 第 2 步：d_11 和 d_12 与下一步的起始加速度 a_21 & a_22 ----------
-[d11_min, d11_max] = d_bounds_from_start(a1_min, a_min, a_max, j_min, j_max, Tc, omega);
-[d12_min, d12_max] = d_bounds_from_start(a1_max, a_min, a_max, j_min, j_max, Tc, omega);
+[d11_min, d11_max] = d_bounds_from_start(a1_max, a_min, a_max, j_min, j_max, Tc, omega);
+[d12_min, d12_max] = d_bounds_from_start(a1_min, a_min, a_max, j_min, j_max, Tc, omega);
 % start with a1_min
 a21_min = max(a_min, a1_min + j_min*Tc);
 a21_max = min(a_max, a1_min + j_max*Tc);
@@ -549,10 +553,10 @@ a21_max = min(a_max, a1_min + j_max*Tc);
 a22_min = max(a_min, a1_max + j_min*Tc);
 a22_max = min(a_max, a1_max + j_max*Tc);
 % ---------- 第 3 步：d_21 d_22 d_23 和 d_24 ----------
-[d21_min, d21_max] = d_bounds_from_start(a21_min, a_min, a_max, j_min, j_max, Tc, omega);
-[d22_min, d22_max] = d_bounds_from_start(a21_max, a_min, a_max, j_min, j_max, Tc, omega);
-[d23_min, d23_max] = d_bounds_from_start(a22_min, a_min, a_max, j_min, j_max, Tc, omega);
-[d24_min, d24_max] = d_bounds_from_start(a22_max, a_min, a_max, j_min, j_max, Tc, omega);
+[d21_min, d21_max] = d_bounds_from_start(a22_max, a_min, a_max, j_min, j_max, Tc, omega);
+[d22_min, d22_max] = d_bounds_from_start(a22_min, a_min, a_max, j_min, j_max, Tc, omega);
+[d23_min, d23_max] = d_bounds_from_start(a21_max, a_min, a_max, j_min, j_max, Tc, omega);
+[d24_min, d24_max] = d_bounds_from_start(a21_min, a_min, a_max, j_min, j_max, Tc, omega);
 % 汇总
 out.dMin  = [d0_min; d11_min; d12_min; d21_min; d22_min; d23_min; d24_min];
 out.dMax  = [d0_max; d11_max; d12_max; d21_max; d22_max; d23_max; d24_max];
