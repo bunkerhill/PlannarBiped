@@ -1,6 +1,7 @@
 clear
 clc
-addpath("../../")
+root = get_root_path();
+addpath(root)
 
 %% Two links system example
 
